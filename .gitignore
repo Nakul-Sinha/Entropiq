@@ -1,3 +1,31 @@
 # important docs (tracked on purpose, force-added)
 IMPLEMENTATION_PLAN.md
 docs/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+coverage.xml
+.coverage
+*.egg-info/
+build/
+dist/
+
+# node
+node_modules/
+.next/
+
+# data and outputs
+data/
+results/
+mlruns/
+models/*
+!models/production.json
+
+# secrets
+.env
