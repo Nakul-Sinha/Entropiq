@@ -1,0 +1,20 @@
+[project]
+name = "tdp-api"
+version = "0.1.0"
+description = "Entropiq HTTP API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "tdp-core",
+    "tdp-platform",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tdp_api"]
+
+[tool.uv.sources]
+tdp-core = { workspace = true }
+tdp-platform = { workspace = true }
