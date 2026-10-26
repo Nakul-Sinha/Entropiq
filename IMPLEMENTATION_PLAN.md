@@ -1,6 +1,7 @@
 # TDP Implementation Plan (multi-agent, multi-worktree)
 
-**Project:** AI Technical Debt Prioritizer (TDP)
+**Project:** Entropiq (AI Technical Debt Prioritizer, "TDP"; Python packages use the `tdp_` prefix)
+**Repository:** https://github.com/Nakul-Sinha/Entropiq (private)
 **Audience:** any coding agent that is given ONE step of this plan and works in its own git worktree.
 **Rule zero:** read sections 0 to 3 completely, then read only your own step. Everything you need is written here.
 The design PDFs in `docs/` are optional background; this file wins if they disagree.
