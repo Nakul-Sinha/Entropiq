@@ -1,0 +1,17 @@
+def handle(command, verbose=False):
+    match command.split():
+        case ["go", direction] if direction in ("north", "south"):
+            return direction
+        case ["drop", *items]:
+            for item in items:
+                if verbose:
+                    print(item)
+        case {"action": action} | {"verb": action}:
+            return action
+        case _:
+            return None
+
+
+def match(case):
+    match = case
+    return match
