@@ -4,8 +4,16 @@ version = "0.1.0"
 description = "Entropiq offline dataset, training and evaluation pipeline"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "matplotlib>=3.9",
+    "mlflow-skinny>=2.16",
+    "optuna>=4.0",
+    "rich>=13.7",
     "tdp-core",
+    "typer>=0.12",
 ]
+
+[project.scripts]
+tdp-ml = "tdp_ml.cli:main"
 
 [build-system]
 requires = ["hatchling"]

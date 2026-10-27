@@ -29,3 +29,6 @@ models/*
 
 # secrets
 .env
+
+# app-managed worktrees and local agent state
+.claude/

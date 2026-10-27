@@ -154,10 +154,12 @@ only history up to a snapshot time T; labels use only what happens in (T, T + 12
   ```
   Check before pushing: `git log -1 --format='%an <%ae>'` must print exactly
   `Nakul-Sinha <180599527+Nakul-Sinha@users.noreply.github.com>`.
-- **Commit messages are short and informal, one line**, for example `miner parses renames`, `szz labels done`,
-  `fix flaky graph test`. No bodies, no prefixes like `feat:`, **no AI or co-author attribution lines**.
+- **Commit messages: one short plain-English line saying what the change does** (section 15.1 has the full
+  rules), for example `Add evolution and ownership features`. Never mention step IDs. No bodies, no prefixes
+  like `feat:`, **no AI or co-author attribution lines**.
 - Before opening the PR: `git fetch origin && git rebase origin/main`, rerun the acceptance commands.
-- PR: `gh pr create --base main --title "<ID> <title>" --body-file handoff/<ID>.md`. Never force-push `main`.
+- PR: plain-English title and a short human description written for the PR (section 15.1); the handoff file is
+  NOT the PR body. Never force-push `main`.
 - `IMPLEMENTATION_PLAN.md` and `docs/` are **tracked but listed in `.gitignore`**. Edits to them are committed
   normally (`git add IMPLEMENTATION_PLAN.md`); adding a *new* file under `docs/` needs `git add -f`.
 
@@ -594,14 +596,15 @@ Size: S (under half a day), M (1 to 2 days), L (3+ days).
 | P1.2 | Python Tree-sitter plugin, complexity, filters | P0.2 | wave 1 | M |
 | P1.3 | Clone detection (winnowing) | P0.2 | wave 1 | S |
 | P1.4 | Import resolution, import graph, centrality | P0.2 | wave 1 | M |
+| P1.5 | Lean mirrors and leakage-safe snapshots (section 15.5) | P1.1 | wave 2 | S |
 | P2.1 | Evolution and ownership features | P1.1 | wave 2 | M |
 | P2.2 | Co-change coupling features | P1.1 | wave 2 | S |
 | P2.3 | Test signals and SATD features | P0.2 | wave 1 | S |
 | P2.4 | SATD classifier training and runtime | P0.2 | wave 1 | M |
 | P2.5 | Bug-fix commit detection (+ GitHub issues) | P1.1 | wave 2 | M |
 | P2.6 | SZZ, labels, defect-history features | P1.1, P2.5 | P2.1, P2.2 | L |
-| P2.7 | Feature assembly (`build_features`) | P1.1-P1.4, P2.1-P2.4, P2.6 | P3.x on synthetic data | M |
-| P2.8 | Dataset pipeline CLI (`tdp-ml`) and real dataset | P2.7 | P5.x, P6.x | L |
+| P2.7 | Feature assembly (`build_features`) | P1.1-P1.5, P2.1-P2.4, P2.6 | P3.x on synthetic data | M |
+| P2.8 | Dataset pipeline CLI (`tdp-ml`) and real dataset | P1.5, P2.7 | P5.x, P6.x | L |
 | P3.0 | Model runtime, bundle format, dev bundle | P0.2 | wave 1 | M |
 | P3.1 | Evaluation harness (splits, metrics, stats) | P0.2 | wave 1 | M |
 | P3.2 | Baselines | P3.1 | wave 2 | S |
@@ -627,7 +630,7 @@ Size: S (under half a day), M (1 to 2 days), L (3+ days).
 | P7.3 | GitHub Action | P7.1, P3.7 | P7.4 | M |
 | P7.4 | Dockerfiles and Compose | P5.3, P5.4, P6.1 | P7.3 | M |
 | P7.5 | Full CI/CD workflows | P7.4 | P7.6 | M |
-| P7.6 | Observability | P5.3, P5.4 | P7.5 | S |
+| P7.6 | Observability | P5.3, P5.4, P7.4 | P7.5 | S |
 | P7.7 | Deployment (single VM, optional CDK) | P7.4 | P7.5 | M |
 | P8.1 | End-to-end tests (Playwright) | P7.4, P6.2-P6.4 | P8.2 | M |
 | P8.2 | Performance and incremental analysis check | P5.3 | P8.1 | S |
@@ -1818,3 +1821,146 @@ all API calls through the typed client in `src/lib/api/`. Until P5.4 is merged, 
 3. When two PRs conflict in a shared file (section 2.6), merge the owner's PR first; the other rebases.
 4. Read every handoff before starting dependents; copy any *Contract changes* into this plan if the step did not.
 5. Close a step only when its handoff exists on `main`.
+
+---
+
+## 15. Amendments for the automated build (these override earlier sections)
+
+The rest of the build is run by an automated orchestrator: a scheduler that feeds steps from the board in
+section 4 into five persistent worktree slots, with a planning stage, a building stage, a supervisor review
+and a single serialized merge stage per step. Every agent reads sections 0 to 3, **this section**, its own
+step section and the handoffs of its dependencies. Where this section and an earlier one disagree, this
+section wins.
+
+### 15.1 Commits, pull requests and merges
+
+- **Commit message:** one short plain-English line that says what the change does, for example
+  `Add evolution and ownership features` or `Fix lineage for deleted files`. Never mention step IDs or plan
+  notation (`P2.1`, "step", "phase", "wave"), no prefixes such as `feat:`, no body, no `Co-Authored-By` or any
+  AI attribution, no em or en dashes. Use as many commits as make sense; each must be meaningful.
+- **PR title:** short plain English, no IDs (for example `Measure how files change and who owns them`).
+- **PR description:** one to three plain paragraphs written for a human reader, each at most 100 words,
+  explaining what the PR does and why. No headings, bullet lists, tables, checklists, code-like IDs such as
+  `P1.2`, em or en dashes, or tool footers. The handoff file is not the PR body.
+- **One PR per step** (a meaningful unit of work). Do not split a step into several PRs or combine steps.
+- **Merging:** only the merge stage merges, one PR at a time: rebase on `origin/main`, rerun checks, wait for
+  green CI, then `gh pr merge <n> --squash --subject "<PR title>" --body ""` and delete the remote branch.
+- **Credentials:** the repository's local git config routes credentials through `gh auth git-credential`, so
+  every push uses the owner's GitHub token. `gh api user -q .login` must print `Nakul-Sinha`. Branch names
+  (`step/<ID>-<slug>`) may contain IDs; commit messages and PR text may not.
+
+### 15.2 Worktree slots and shared folders
+
+- Five persistent worktrees: `C:/Users/nakul/entropiq-wt/s1` to `s5` (outside OneDrive). The orchestrator
+  gives each slot one step at a time. **Work only inside your slot**: never edit files in the main checkout
+  (`C:/Users/nakul/OneDrive/Desktop/Academics/ai/project'`) or in another slot, and never run git commands that
+  change them. Other agents are working in the other slots at the same time.
+- In every shell command `cd` into your slot first (or use absolute paths); use absolute paths with file tools.
+- If `git fetch` fails with a lock error, another slot is fetching: wait a few seconds and retry.
+- Shared folders outside git, used by every slot through environment variables (code reads them with
+  `tdp_core.paths`):
+  `TDP_DATA_DIR=C:/Users/nakul/entropiq-data/data`, `TDP_MODELS_DIR=C:/Users/nakul/entropiq-data/models`,
+  `TDP_RESULTS_DIR=C:/Users/nakul/entropiq-data/results`,
+  `MLFLOW_TRACKING_URI=file:///C:/Users/nakul/entropiq-data/mlruns`.
+- Bare mirrors of 23 training repositories are already downloaded to `$TDP_DATA_DIR/mirrors/<slug>.git`
+  (branches and tags only, fetch refspec `+refs/heads/*:refs/heads/*`): psf/requests, pallets/flask,
+  pallets/click, pallets/werkzeug, encode/httpx, Kludex/starlette, psf/black, python-poetry/poetry,
+  celery/celery, Textualize/rich, pytest-dev/pytest, scrapy/scrapy, aio-libs/aiohttp,
+  marshmallow-code/marshmallow, tox-dev/tox, pylint-dev/pylint, python-attrs/attrs, paramiko/paramiko,
+  Delgan/loguru, fastapi/fastapi, encode/django-rest-framework, pypa/pip, mitmproxy/mitmproxy.
+  Slug = `owner__name` lowercased.
+
+### 15.3 Resource rules (laptop with 12 threads, 16 GB RAM, about 9 GB free disk, no local Docker)
+
+- **Never start Docker Desktop.** Container builds, compose stacks and browser end-to-end tests are verified in
+  GitHub Actions (ubuntu runners have Docker). Locally, run everything that does not need containers.
+- No `pytest -n` (xdist) locally. Limit thread pools to 4 (`n_jobs=4`, XGBoost `nthread=4`, Optuna
+  `n_jobs=1`). The RTX 4050 GPU may be used for XGBoost (`device="cuda"`) with an automatic CPU fallback.
+- Node builds: `NODE_OPTIONS=--max-old-space-size=2048`.
+- Disk is scarce: keep new data small, delete temporary clones and files you create, and keep the whole real
+  dataset (mirrors included) under 2.5 GB.
+- Tests that need Postgres or Redis read `TEST_DATABASE_URL` / `TEST_REDIS_URL`, carry the `integration`
+  marker and skip when the variable is unset. CI sets both (ci.yml has Postgres 16 and Redis 7 services).
+  Prefer unit tests that need no services (fakeredis, Celery eager mode, SQLite only where SQL is portable).
+- GitHub Actions minutes are limited on a private repository: avoid pushing repeatedly just to test; run the
+  checks locally first and push once they pass.
+
+### 15.4 Shared files and parallel safety
+
+- Dependencies for every planned package are already in `uv.lock` (FastAPI, uvicorn, slowapi, redis,
+  prometheus-fastapi-instrumentator, Celery, SQLAlchemy, asyncpg, psycopg, Alembic, pydantic-settings,
+  structlog, prometheus-client, sentry-sdk, Typer, rich, Optuna, mlflow-skinny, matplotlib, anthropic as the
+  `advisor` extra; dev: pytest-asyncio, httpx, jsonschema, fakeredis). Use them. Adding a new dependency is
+  allowed but changes `uv.lock`; the merge stage re-locks on conflicts.
+- The `__init__.py` files of `tdp_core.features`, `labeling`, `model`, `planning`, `advisor`, `report`,
+  `security` exist and stay docstring-only. Import from modules directly. Never edit another subpackage's
+  `__init__.py`.
+- `tdp-ml` commands are plug-ins: add a module under `ml/tdp_ml/commands/` that defines
+  `register(app: typer.Typer) -> None`. Never edit `ml/tdp_ml/cli.py`.
+- CI files: `.github/workflows/ci.yml` (Python, with service containers) and `web.yml` (runs when `apps/web`
+  changes) already exist. Only P7.4 (adds a compose check workflow), P7.5 (owns all workflows afterwards) and
+  P8.1 (adds an e2e workflow) touch `.github/workflows/`.
+- Mypy uses explicit package bases, so test files with the same name in different folders no longer clash.
+  Put shared fixtures in a `conftest.py` inside your own test folder (`packages/core/tests/<area>/`).
+- Never edit `IMPLEMENTATION_PLAN.md`, `tdp_core/contracts.py` or `tdp_core/config.py`. Report contract
+  problems in the handoff.
+
+### 15.5 Leakage-safe snapshots (fixes a flaw found while building the miner)
+
+**Problem.** A rebased or cherry-picked commit keeps its original author date, so "the last commit with
+`author_time <= T`" can describe a tree that already contains work done after T. Branch commits authored
+before T can also reach the main branch only after T. Both leak future information into features.
+
+**Rule from now on.** The repository state at T is the **first-parent commit of the default branch with
+committer date <= T**, and "history up to T" is the **set of non-merge commits reachable from that commit**.
+Ages and decay weights still use `author_time` (clipped at zero).
+
+- **P1.5 (new step, owns `tdp_core/mining/{mirror,snapshots,reach}.py` and their tests):**
+  `ensure_mirror` makes lean bare mirrors (`git clone --bare`, then fetch refspec `+refs/heads/*:refs/heads/*`,
+  no pull-request refs) and keeps working with the prefetched mirrors; add
+  `default_branch(repo_dir) -> str`, `snapshot_sha(repo_dir, t, branch=None) -> str | None`
+  (`git rev-list -1 --first-parent --before=<t> <branch>`) and
+  `reachable_shas(repo_dir, sha) -> frozenset[str]` (`git rev-list --no-merges <sha>`); give `make_snapshots`
+  and `snapshot_at` an optional keyword `repo_dir` that switches them to the new rule (old behaviour kept when
+  it is omitted, so existing callers and tests still pass).
+- **P2.1, P2.2:** every function also takes a keyword `reachable: AbstractSet[str] | None = None`. When given,
+  only commits whose sha is in `reachable` count as history up to T (instead of `author_time <= T`).
+- **P2.6:** `make_labels` and `defect_history_features` take `reachable_T` and `reachable_end` (end = state at
+  T + H). Label-window commits are those in `reachable_end - reachable_T`; prior history is `reachable_T`.
+  An inducing commit is "before T" when it is in `reachable_T`.
+- **P2.7:** compute `reachable_T` with P1.5 helpers and pass it on. **P2.8:** build snapshots with
+  `repo_dir`, and labels with both reachable sets. **P5.2:** at inference every mined commit is reachable.
+
+### 15.6 Step-specific amendments
+
+- **P2.4:** download the SATD dataset into `$TDP_DATA_DIR/satd/` (never commit it).
+- **P2.5 / P2.8:** GitHub token via `gh auth token`; cache issues under `$TDP_DATA_DIR/issues/`.
+- **P2.8:** use the 23 prefetched mirrors, check the criteria and drop failures (keep at least 15). Bound the
+  runtime to about three hours: at most the 8 most recent snapshots per repository, SZZ only for bug fixes
+  that fall inside a label window, work repository by repository in commands that each finish in under ten
+  minutes (or run long jobs in the background and poll). Data goes under `$TDP_DATA_DIR`.
+- **P3.x, P8.2:** commands are `tdp_ml/commands/` plug-ins; outputs go to `$TDP_RESULTS_DIR`, bundles to
+  `$TDP_MODELS_DIR`, MLflow runs to the shared tracking folder. **P3.3:** 30 Optuna trials (50 if each takes
+  under a minute); GPU allowed.
+- **P3.7:** bundles live in `$TDP_MODELS_DIR`; the tracked `models/production.json` records version and
+  sha256, with `uri` pointing at the local bundle until P7.3 publishes a release asset.
+- **P5.1, P5.3, P5.4:** database and Redis tests are `integration` tests (15.3); no CI file edits.
+- **P6.1:** install every frontend dependency later pages need (recharts, cytoscape, cytoscape-fcose,
+  @tanstack/react-query, @tanstack/react-table, @tanstack/react-virtual, openapi-fetch, openapi-typescript,
+  msw, vitest, @testing-library/react, @testing-library/jest-dom, jsdom, @playwright/test), add every
+  shadcn/ui component they need, and create the navigation for all routes. No CI edits (web.yml exists).
+- **P6.2, P6.3, P6.4:** never change `package.json`, `package-lock.json`, the layout, providers or
+  `src/components/ui`; only your routes and `src/features/<area>`. If something is missing, note it in the
+  handoff.
+- **P7.4:** no local Docker: add `.github/workflows/compose-check.yml` that builds the images, starts the
+  compose stack, checks `/readyz` and runs a small analysis; it runs on PRs that touch `infra/` or the
+  Dockerfiles. **P7.6** now depends on P7.4 (both edit `infra/compose.yaml`).
+- **P7.7:** no real server is available: deliver the scripts and docs, validate the Caddyfile and compose files
+  in CI, and run `cdk synth` only if CDK is included.
+- **P8.1:** put end-to-end services in `infra/compose.e2e.yaml` (an override file) and run Playwright in its own
+  workflow `.github/workflows/e2e.yml`.
+
+### 15.7 Effort levels
+
+Planning stages run at **max** reasoning effort; building, supervisor review and merge stages run at
+**extra-high** effort.
