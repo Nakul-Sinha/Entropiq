@@ -1,0 +1,17 @@
+import os
+
+
+def ok(a, b):
+    if a:
+        return b
+    return a
+
+
+def broken(x):
+    return x + * 2
+
+
+class Fine:
+    def method(self, y):
+        for i in y:
+            pass

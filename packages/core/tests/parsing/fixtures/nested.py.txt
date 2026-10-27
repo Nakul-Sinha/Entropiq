@@ -1,0 +1,29 @@
+def outer(items, flag=False):
+    def helper(x):
+        if x > 0:
+            return x
+        return -x
+
+    class Local:
+        def method(self):
+            def deepest():
+                return 1
+
+            return deepest()
+
+    key = lambda item: item if flag else 0
+    if flag:
+        for item in items:
+            helper(item)
+    return sorted(items, key=key)
+
+
+def decorator(fn):
+    def wrapper(*args, **kwargs):
+        while True:
+            try:
+                return fn(*args, **kwargs)
+            except ValueError:
+                continue
+
+    return wrapper

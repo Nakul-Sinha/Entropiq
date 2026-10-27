@@ -1,0 +1,14 @@
+SQUARES = [n * n for n in range(10) if n % 2]
+
+
+def pairs(matrix, threshold):
+    flat = [cell for row in matrix for cell in row if cell if cell > threshold]
+    lookup = {key: value for key, value in flat if key}
+    unique = {item for item in flat}
+    total = sum(x for x in unique if x is not None and x > 0)
+    pick = lambda seq: [s for s in seq if s] or None
+    return flat, lookup, unique, total, pick
+
+
+def nested_lambda():
+    return lambda a: (lambda b: a if b else b)

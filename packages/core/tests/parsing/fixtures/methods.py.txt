@@ -1,0 +1,37 @@
+import functools
+
+
+class Base:
+    """A base class."""
+    kind = "base" if __debug__ else "release"
+
+    def __init__(self, name: str, *, size: int = 0) -> None:
+        self.name = name
+        self.size = size
+
+    @classmethod
+    def create(cls, *names, **options):
+        return cls(*names, **options)
+
+    @staticmethod
+    def static(a, b, /, c=None):
+        return a or b or c
+
+    @functools.cache
+    async def fetch(self, url, retries=3):
+        async with session(url) as response:
+            return await response.read()
+
+    def _private(this, value):
+        return value
+
+
+class Child(Base):
+    def __init__(self: "Child", *args) -> None:
+        super().__init__(*args)
+
+    class Meta:
+        ordering = ["name"]
+
+        def describe(cls):
+            return cls.ordering if cls else None
