@@ -1,0 +1,10 @@
+# Remediation cost model. Minutes unless stated otherwise. Copied into each model bundle as cost_model.yaml.
+complexity_threshold: 10        # cyclomatic points a function may have before it costs time
+complexity_per_point_over: 10   # minutes per point above the threshold, summed over functions
+duplication_per_group: 30       # minutes per clone group (CloneStats.clone_groups)
+duplication_per_line: 1         # minutes per duplicated line (CloneStats.dup_lines)
+tests_per_public_function: 20   # minutes per public function, only when no test file imports the file
+cycle_per_file: 120             # minutes when the file is in an import cycle (scc_size > 1)
+satd_per_item: 30               # minutes per self-admitted debt comment (satd_count)
+blast_radius_factor: 0.1        # multiplier = 1 + factor * log2(1 + fan_in), no unit
+min_hours: 0.5                  # floor of every estimate, in hours
