@@ -1843,8 +1843,12 @@ section wins.
   explaining what the PR does and why. No headings, bullet lists, tables, checklists, code-like IDs such as
   `P1.2`, em or en dashes, or tool footers. The handoff file is not the PR body.
 - **One PR per step** (a meaningful unit of work). Do not split a step into several PRs or combine steps.
-- **Merging:** only the merge stage merges, one PR at a time: rebase on `origin/main`, rerun checks, wait for
-  green CI, then `gh pr merge <n> --squash --subject "<PR title>" --body ""` and delete the remote branch.
+- **Merging:** only the merge stage merges, one PR at a time, and **never with GitHub's merge button or
+  `gh pr merge`**: GitHub authors those commits with the account's private email, which breaks the identity
+  rule. Instead rebase the branch on `origin/main`, squash it into one commit whose message is the PR title
+  (`git reset --soft origin/main`, then `git commit -m "<PR title>"` with the local Nakul-Sinha identity),
+  `git push --force-with-lease`, wait for green CI on that commit, then fast-forward main with
+  `git push origin <branch>:main`. GitHub marks the PR as merged by itself. Delete the remote branch after.
 - **Credentials:** the repository's local git config routes credentials through `gh auth git-credential`, so
   every push uses the owner's GitHub token. `gh api user -q .login` must print `Nakul-Sinha`. Branch names
   (`step/<ID>-<slug>`) may contain IDs; commit messages and PR text may not.
