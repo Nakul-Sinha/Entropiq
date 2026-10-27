@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+import os
+import os.path as osp, json
+from typing import TYPE_CHECKING
+from . import sibling
+from .. import parent_mod as pm
+from ..pkg.sub import (
+    alpha,
+    beta as b,
+)
+from ...deep import *
+from collections.abc import Mapping, Sequence
+
+if TYPE_CHECKING:
+    from .types import Alias
+
+try:
+    import ujson as fast_json
+except ImportError:
+    fast_json = None
+
+
+def lazy():
+    import importlib
+    from xml.etree import ElementTree
+
+    return importlib, ElementTree

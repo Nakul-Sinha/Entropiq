@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Module docstring.
+
+It spans several lines, including the blank one above.
+"""
+
+# A comment-only line.
+CONSTANT = 42  # trailing comment
+
+
+def documented(a, b):
+    """Return the sum.
+
+    Args:
+        a: first.
+    """
+    # explain the next line
+    return a + b
+
+
+TEMPLATE = (
+    "first part "
+    # comment inside an expression
+    "second part"
+)
+EMPTY = ""

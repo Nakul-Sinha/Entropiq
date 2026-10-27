@@ -1,0 +1,123 @@
+{
+  "_about": "Hand-checked FileSyntax values for each fixture. functions: name, start/end line, cyclomatic (cc), cognitive (cog), max_nesting (nest), params. imports: [module, names, level, line]. comments: [line, text]. Keys left out of an entry are not checked.",
+  "docstrings.py.txt": {
+    "sloc": 17,
+    "module_cc": 1,
+    "classes": 0,
+    "parse_error": false,
+    "functions": [
+      {"name": "documented", "start": 12, "end": 19, "cc": 1, "cog": 0, "nest": 0, "params": 2}
+    ],
+    "imports": [],
+    "comments": [
+      [1, "!/usr/bin/env python"],
+      [2, "-*- coding: utf-8 -*-"],
+      [8, "A comment-only line."],
+      [9, "trailing comment"],
+      [18, "explain the next line"],
+      [24, "comment inside an expression"]
+    ]
+  },
+  "nested.py.txt": {
+    "sloc": 23,
+    "module_cc": 1,
+    "classes": 1,
+    "parse_error": false,
+    "functions": [
+      {"name": "outer", "start": 1, "end": 18, "cc": 4, "cog": 6, "nest": 2, "params": 2},
+      {"name": "outer.helper", "start": 2, "end": 5, "cc": 2, "cog": 1, "nest": 1, "params": 1},
+      {"name": "outer.Local.method", "start": 8, "end": 12, "cc": 1, "cog": 0, "nest": 0, "params": 0},
+      {"name": "outer.Local.method.deepest", "start": 9, "end": 10, "cc": 1, "cog": 0, "nest": 0, "params": 0},
+      {"name": "decorator", "start": 21, "end": 29, "cc": 1, "cog": 5, "nest": 0, "params": 1},
+      {"name": "decorator.wrapper", "start": 22, "end": 27, "cc": 3, "cog": 3, "nest": 2, "params": 2}
+    ],
+    "imports": [],
+    "comments": []
+  },
+  "methods.py.txt": {
+    "sloc": 26,
+    "module_cc": 1,
+    "classes": 3,
+    "parse_error": false,
+    "functions": [
+      {"name": "Base.__init__", "start": 8, "end": 10, "cc": 1, "cog": 0, "nest": 0, "params": 2},
+      {"name": "Base.create", "start": 13, "end": 14, "cc": 1, "cog": 0, "nest": 0, "params": 2},
+      {"name": "Base.static", "start": 17, "end": 18, "cc": 3, "cog": 2, "nest": 0, "params": 3},
+      {"name": "Base.fetch", "start": 21, "end": 23, "cc": 1, "cog": 0, "nest": 1, "params": 2},
+      {"name": "Base._private", "start": 25, "end": 26, "cc": 1, "cog": 0, "nest": 0, "params": 2},
+      {"name": "Child.__init__", "start": 30, "end": 31, "cc": 1, "cog": 0, "nest": 0, "params": 1},
+      {"name": "Child.Meta.describe", "start": 36, "end": 37, "cc": 2, "cog": 1, "nest": 0, "params": 0}
+    ],
+    "imports": [["functools", [], 0, 1]]
+  },
+  "branches.py.txt": {
+    "sloc": 37,
+    "module_cc": 6,
+    "classes": 0,
+    "parse_error": false,
+    "functions": [
+      {"name": "classify", "start": 7, "end": 18, "cc": 7, "cog": 9, "nest": 2, "params": 2},
+      {"name": "scan", "start": 21, "end": 39, "cc": 6, "cog": 17, "nest": 5, "params": 1}
+    ],
+    "imports": [["sys", [], 0, 1]]
+  },
+  "comprehensions.py.txt": {
+    "sloc": 10,
+    "module_cc": 3,
+    "classes": 0,
+    "parse_error": false,
+    "functions": [
+      {"name": "pairs", "start": 4, "end": 10, "cc": 14, "cog": 2, "nest": 0, "params": 2},
+      {"name": "nested_lambda", "start": 13, "end": 14, "cc": 2, "cog": 1, "nest": 0, "params": 0}
+    ],
+    "imports": []
+  },
+  "matching.py.txt": {
+    "sloc": 15,
+    "module_cc": 1,
+    "classes": 0,
+    "parse_error": false,
+    "functions": [
+      {"name": "handle", "start": 1, "end": 12, "cc": 8, "cog": 6, "nest": 3, "params": 2},
+      {"name": "match", "start": 15, "end": 17, "cc": 1, "cog": 0, "nest": 0, "params": 1}
+    ],
+    "imports": []
+  },
+  "imports.py.txt": {
+    "sloc": 22,
+    "module_cc": 3,
+    "classes": 0,
+    "parse_error": false,
+    "functions": [
+      {"name": "lazy", "start": 24, "end": 28, "cc": 1, "cog": 0, "nest": 0, "params": 0}
+    ],
+    "imports": [
+      ["__future__", ["annotations"], 0, 1],
+      ["os", [], 0, 3],
+      ["os.path", [], 0, 4],
+      ["json", [], 0, 4],
+      ["typing", ["TYPE_CHECKING"], 0, 5],
+      ["", ["sibling"], 1, 6],
+      ["", ["parent_mod"], 2, 7],
+      ["pkg.sub", ["alpha", "beta"], 2, 8],
+      ["deep", ["*"], 3, 12],
+      ["collections.abc", ["Mapping", "Sequence"], 0, 13],
+      ["types", ["Alias"], 1, 16],
+      ["ujson", [], 0, 19],
+      ["importlib", [], 0, 25],
+      ["xml.etree", ["ElementTree"], 0, 26]
+    ]
+  },
+  "broken.py.txt": {
+    "sloc": 11,
+    "module_cc": 1,
+    "classes": 1,
+    "parse_error": true,
+    "functions": [
+      {"name": "ok", "start": 4, "end": 7, "cc": 2, "cog": 1, "nest": 1, "params": 2},
+      {"name": "broken", "start": 10, "end": 11, "cc": 1, "cog": 0, "nest": 0, "params": 1},
+      {"name": "Fine.method", "start": 15, "end": 17, "cc": 2, "cog": 1, "nest": 1, "params": 1}
+    ],
+    "imports": [["os", [], 0, 1]]
+  }
+}
