@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Entropiq command-line interface"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "rich>=13.7",
     "tdp-core",
+    "typer>=0.12",
 ]
 
 [build-system]

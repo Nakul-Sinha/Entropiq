@@ -4,8 +4,13 @@ version = "0.1.0"
 description = "Entropiq HTTP API"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "fastapi>=0.115",
+    "prometheus-fastapi-instrumentator>=7.0",
+    "redis>=5.0",
+    "slowapi>=0.1.9",
     "tdp-core",
     "tdp-platform",
+    "uvicorn[standard]>=0.30",
 ]
 
 [build-system]

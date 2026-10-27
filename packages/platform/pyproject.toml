@@ -4,6 +4,14 @@ version = "0.1.0"
 description = "Entropiq platform: database models, settings, observability"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic>=1.13",
+    "asyncpg>=0.29",
+    "prometheus-client>=0.20",
+    "psycopg[binary]>=3.2",
+    "pydantic-settings>=2.4",
+    "sentry-sdk>=2.10",
+    "sqlalchemy[asyncio]>=2.0",
+    "structlog>=24.1",
     "tdp-core",
 ]
 

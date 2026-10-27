@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Entropiq background workers"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "tdp-core",
+    "celery[redis]>=5.4",
+    "redis>=5.0",
+    "tdp-core[advisor]",
     "tdp-platform",
 ]
 

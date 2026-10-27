@@ -38,6 +38,10 @@ dev = [
     "pandas-stubs",
     "types-PyYAML",
     "types-networkx",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "jsonschema>=4.23",
+    "fakeredis>=2.25",
 ]
 
 [tool.ruff]
@@ -54,6 +58,10 @@ known-first-party = ["tdp_core", "tdp_platform", "tdp_api", "tdp_worker", "tdp_c
 [tool.mypy]
 python_version = "3.12"
 warn_unused_configs = true
+# Test folders have no __init__.py; explicit bases give each test file a unique module name
+# (tests.mining.test_git), so equal file names in different folders never clash.
+explicit_package_bases = true
+mypy_path = "packages/core"
 
 [[tool.mypy.overrides]]
 module = ["tdp_core", "tdp_core.*"]
@@ -66,8 +74,12 @@ module = [
     "sklearn", "sklearn.*",
     "shap", "shap.*",
     "xgboost", "xgboost.*",
-    "tree_sitter", "tree_sitter.*",
     "tree_sitter_python", "tree_sitter_python.*",
+    "optuna", "optuna.*",
+    "mlflow", "mlflow.*",
+    "celery", "celery.*",
+    "slowapi", "slowapi.*",
+    "fakeredis", "fakeredis.*",
 ]
 ignore_missing_imports = true
 
@@ -77,4 +89,5 @@ addopts = "-m 'not network' --import-mode=importlib"
 markers = [
     "network: hits the network (skipped by default; run with -m network)",
     "leakage: leakage checks on the real dataset",
+    "integration: needs Postgres or Redis (set TEST_DATABASE_URL / TEST_REDIS_URL; skipped otherwise)",
 ]
