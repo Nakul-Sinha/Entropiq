@@ -1,0 +1,65 @@
+# LambdaMART ranker training and tuning (tdp-ml train).
+#
+# The code adds random_state (= seed), device and n_jobs itself, so they never appear here.
+
+experiment: entropiq-ranker
+model_name: ranker
+seed: 42
+
+# Optuna TPE trials and forward folds inside the temporal training set.
+n_trials: 50
+n_folds: 2
+
+# Final models use rounds_factor * mean(best_iteration + 1) of the best trial's folds.
+rounds_factor: 1.1
+
+# auto picks cuda when XGBoost can use it and falls back to cpu.
+device: auto
+nthread: 4
+
+# Fixed XGBRanker parameters. early_stopping_rounds and eval_metric apply only while tuning.
+fixed:
+  objective: "rank:ndcg"
+  lambdarank_pair_method: topk
+  lambdarank_num_pair_per_sample: 10
+  tree_method: hist
+  eval_metric: ["ndcg@10"]
+  early_stopping_rounds: 100
+  n_estimators: 2000
+
+# Search space (int or float, optional log scale).
+search:
+  max_depth:
+    type: int
+    low: 3
+    high: 10
+  learning_rate:
+    type: float
+    low: 0.01
+    high: 0.2
+    log: true
+  min_child_weight:
+    type: float
+    low: 1.0
+    high: 20.0
+  subsample:
+    type: float
+    low: 0.5
+    high: 1.0
+  colsample_bytree:
+    type: float
+    low: 0.5
+    high: 1.0
+  reg_lambda:
+    type: float
+    low: 0.001
+    high: 10.0
+    log: true
+  reg_alpha:
+    type: float
+    low: 0.001
+    high: 10.0
+    log: true
+
+# Base features constrained to +1 with --monotone (their pct_ copies too).
+monotone_features: [commits_decayed, churn_decayed, prior_latent_bugs, transitive_dependents]
