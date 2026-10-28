@@ -1,0 +1,16 @@
+# Settings for training snapshots and labels (tdp-ml manifest copies them into data/manifest.json).
+#
+# Training mines the whole history, so history_window_days is null. inference_szz_max_fixes keeps its
+# default so the defect-history features match what inference computes.
+
+settings:
+  history_window_days: null
+
+snapshots:
+  # The newest snapshots of the leakage-safe schedule that are kept per repository.
+  max_per_repo: 8
+
+szz:
+  # Unique bug fixes traced with SZZ per repository: the label-window fixes plus the newest prior keyword
+  # fixes of every kept snapshot. Older snapshots are dropped until the needed fixes fit the budget.
+  max_fixes: 1500

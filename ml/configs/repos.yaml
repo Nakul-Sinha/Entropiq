@@ -1,0 +1,46 @@
+# Training repositories for the dataset pipeline (tdp-ml manifest reads this file).
+#
+# Every repository with a prefetched mirror is listed. The dataset uses every repository (or the first
+# max_repos, when set) that passes all criteria below; the others are recorded with the reason they
+# failed. Ids are stable and never reused, because qid = id * 100 + snapshot index.
+#
+# issues: false means the GitHub issues are not crawled because the repository has 5,000 or more issues.
+# Its bug fixes then come from commit keywords only and the bug-issue criterion is waived.
+#
+# Thresholds are inclusive. min_source_files is 20 rather than 80: with 80 only 12 of the 23 mirrored
+# repositories qualify, and 20 files still leave the ranking metrics room to discriminate.
+
+max_repos: null
+
+criteria:
+  min_history_days: 1095
+  min_commits: 1000
+  min_source_files: 20
+  min_bug_issues: 30
+  max_days_since_last_commit: 365
+  min_snapshots: 1
+
+repos:
+  - {id: 30, name: Delgan/loguru}                         # 1,177 issues
+  - {id: 3, name: pallets/click}                          # 1,819 issues
+  - {id: 25, name: python-attrs/attrs}                    # 799 issues
+  - {id: 28, name: paramiko/paramiko}                     # 1,756 issues
+  - {id: 19, name: marshmallow-code/marshmallow}          # 1,278 issues
+  - {id: 6, name: encode/httpx}                           # 925 issues
+  - {id: 7, name: Kludex/starlette}                       # 794 issues
+  - {id: 11, name: psf/black}                             # 2,838 issues
+  - {id: 2, name: pallets/flask}                          # 2,769 issues
+  - {id: 1, name: psf/requests}                           # 4,181 issues
+  - {id: 21, name: tox-dev/tox}                           # 1,928 issues
+  - {id: 5, name: pallets/werkzeug}                       # 1,304 issues
+  - {id: 12, name: python-poetry/poetry, issues: false}   # 6,370 issues
+  - {id: 17, name: scrapy/scrapy}                         # 3,316 issues
+  - {id: 13, name: celery/celery, issues: false}          # 5,355 issues
+  - {id: 15, name: Textualize/rich}                       # 1,548 issues
+  - {id: 18, name: aio-libs/aiohttp}                      # 3,268 issues
+  - {id: 8, name: encode/django-rest-framework}           # 3,965 issues
+  - {id: 9, name: fastapi/fastapi}                        # 3,556 issues
+  - {id: 29, name: mitmproxy/mitmproxy}                   # 3,705 issues
+  - {id: 16, name: pytest-dev/pytest, issues: false}      # 6,432 issues
+  - {id: 20, name: pypa/pip, issues: false}               # 7,819 issues
+  - {id: 23, name: pylint-dev/pylint, issues: false}      # 6,060 issues
