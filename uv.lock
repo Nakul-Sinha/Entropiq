@@ -2079,6 +2079,7 @@ name = "tdp-cli"
 version = "0.1.0"
 source = { editable = "cli" }
 dependencies = [
+    { name = "prompt-toolkit" },
     { name = "rich" },
     { name = "tdp-core" },
     { name = "typer" },
@@ -2086,6 +2087,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "prompt-toolkit", specifier = ">=3.0.53" },
     { name = "rich", specifier = ">=13.7" },
     { name = "tdp-core", editable = "packages/core" },
     { name = "typer", specifier = ">=0.12" },

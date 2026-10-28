@@ -4,10 +4,15 @@ version = "0.1.0"
 description = "Entropiq command-line interface"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "prompt-toolkit>=3.0.53",
     "rich>=13.7",
     "tdp-core",
     "typer>=0.12",
 ]
+
+[project.scripts]
+entropiq = "tdp_cli.main:main"
+tdp = "tdp_cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
