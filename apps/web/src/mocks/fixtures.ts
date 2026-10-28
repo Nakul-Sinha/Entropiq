@@ -631,7 +631,7 @@ export const MOCK_STAGES: readonly { stage: string; pct: number; message: string
   `Scored ${N_FILES} files`,
   `Explained ${N_FILES} files`,
   `Planned ${DEFAULT_PLAN.steps.length} fix${DEFAULT_PLAN.steps.length === 1 ? "" : "es"} within 40 hours`,
-].map((message, k) => ({ ...ANALYSIS_STAGES[k], message }));
+].map((message, k) => ({ stage: ANALYSIS_STAGES[k].stage, pct: ANALYSIS_STAGES[k].pct, message }));
 
 /**
  * The Analysis of a simulated run id at `nowMs`, or undefined for any other id. Finished runs

@@ -103,7 +103,11 @@ export function subscribeToProgress(
       headers: { Accept: "text/event-stream" },
       signal: controller.signal,
     });
-    if (closed) return;
+    if (closed) {
+      // Unsubscribed while the request was in flight: release the stream (and its mock timers).
+      data?.cancel().catch(() => undefined);
+      return;
+    }
     if (error !== undefined || !response.ok || !data) {
       fail(new ApiError(toProblem(error, response)));
       return;
