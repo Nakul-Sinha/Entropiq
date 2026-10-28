@@ -23,9 +23,14 @@ import type {
   WhatIfRequest,
 } from "./types";
 
-type Result<T> = { data?: T; error?: unknown; response: Response };
+type Result = { data?: unknown; error?: unknown; response: Response };
 
-function unwrap<T>({ data, error, response }: Result<T>): T {
+/**
+ * The success body, typed by the caller's declared return type. openapi-fetch widens tuples such
+ * as `effort_hours: [number, number]` to arrays, so the body is cast to the type derived in
+ * types.ts (the JSON is the same).
+ */
+function unwrap<T>({ data, error, response }: Result): T {
   if (error !== undefined || !response.ok) throw new ApiError(toProblem(error, response));
   return data as T;
 }
@@ -84,7 +89,9 @@ export async function getPlan(
   client: ApiClient = api,
 ): Promise<PlanOut> {
   const query = budgetHours === undefined ? {} : { budget_hours: budgetHours };
-  return unwrap(await client.GET("/api/v1/analyses/{id}/plan", { params: { path: { id }, query } }));
+  return unwrap(
+    await client.GET("/api/v1/analyses/{id}/plan", { params: { path: { id }, query } }),
+  );
 }
 
 /** POST /analyses/{id}/whatif: the priority, band and risk after the chosen actions. */

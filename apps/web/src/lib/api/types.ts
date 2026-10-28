@@ -82,7 +82,9 @@ export type DoneEventData = { status: AnalysisStatus };
 // Compile-time guard: a renamed path, method or status code in schema.ts turns a derived type into
 // `never`, which fails this check instead of silently typing values as `never`.
 type IsNever<T> = [T] extends [never] ? true : false;
-type AllDefined<T extends readonly unknown[]> = true extends { [K in keyof T]: IsNever<T[K]> }[number]
+type AllDefined<T extends readonly unknown[]> = true extends {
+  [K in keyof T]: IsNever<T[K]>;
+}[number]
   ? false
   : true;
 type Assert<T extends true> = T;

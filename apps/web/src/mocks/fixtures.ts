@@ -237,7 +237,10 @@ const MONTHS: readonly string[] = Array.from({ length: 24 }, (_, k) => {
 });
 
 type Built = {
-  detail: Omit<FileDetail, "reasons" | "mitigations" | "shap_by_family" | "top_reason" | "plan_step">;
+  detail: Omit<
+    FileDetail,
+    "reasons" | "mitigations" | "shap_by_family" | "top_reason" | "plan_step"
+  >;
   hours: number;
 };
 
@@ -330,7 +333,8 @@ function buildFile(rank: number): Built {
     betweenness: round4(Math.min(1, 0.01 * dependents.length * dependencies.length)),
     scc_size: CYCLE.includes(path) ? 2 : 1,
     cochange_partners: 1 + Math.floor(rand() * 6) + hidden.length,
-    cochange_max_conf: hidden.length > 0 ? Math.max(...hidden.map((h) => h[2])) : round3(0.2 + 0.3 * rand()),
+    cochange_max_conf:
+      hidden.length > 0 ? Math.max(...hidden.map((h) => h[2])) : round3(0.2 + 0.3 * rand()),
     hidden_coupling: hidden.length,
     has_test_file: tests.length > 0 ? 1 : 0,
     test_importers: tests.length,
@@ -424,7 +428,12 @@ function reasonText(feature: string, value: number, percentile: number): string 
   }
 }
 
-function makeReason(family: Family, feature: string, features: Record<string, number>, shap: number): Reason {
+function makeReason(
+  family: Family,
+  feature: string,
+  features: Record<string, number>,
+  shap: number,
+): Reason {
   const value = features[feature];
   const percentile = percentileOf(feature, value);
   return { family, feature, value, percentile, shap, text: reasonText(feature, value, percentile) };
@@ -442,7 +451,9 @@ type Candidate = { file: Built; benefit: number; roi: number };
 export function mockPlan(budgetHours: number): PlanOut {
   const candidates: Candidate[] = BUILT.filter((b) => b.detail.priority >= 50)
     .map((file) => {
-      const benefit = round3(file.detail.risk * (1 + file.detail.features.transitive_dependents / 10));
+      const benefit = round3(
+        file.detail.risk * (1 + file.detail.features.transitive_dependents / 10),
+      );
       return { file, benefit, roi: round3(benefit / file.hours) };
     })
     .sort((a, b) => b.roi - a.roi || byCodePoint(a.file.detail.path, b.file.detail.path));
@@ -565,7 +576,9 @@ export const mockSummary: AnalysisSummary = {
   medium: countBand("Medium"),
   low: countBand("Low"),
   critical_hours: round1(
-    mockFileDetails.filter((f) => f.band === "Critical").reduce((s, f) => s + mockFileHours(f.id), 0),
+    mockFileDetails
+      .filter((f) => f.band === "Critical")
+      .reduce((s, f) => s + mockFileHours(f.id), 0),
   ),
   debt_types: Object.fromEntries(
     DEBT_TYPES.map((t) => [t, mockFileDetails.filter((f) => f.debt_types.includes(t)).length]),
@@ -681,7 +694,12 @@ function buildTreemap(): TreemapNode {
     for (const part of parts.slice(0, -1)) {
       let next = dir.dirs.get(part);
       if (!next) {
-        next = { name: part, path: dir.path ? `${dir.path}/${part}` : part, dirs: new Map(), leaves: [] };
+        next = {
+          name: part,
+          path: dir.path ? `${dir.path}/${part}` : part,
+          dirs: new Map(),
+          leaves: [],
+        };
         dir.dirs.set(part, next);
       }
       dir = next;
@@ -751,13 +769,31 @@ export const mockTrend: TrendOut = {
 export function mockAdviceFor(file: FileDetail): Advice {
   const fn = file.functions[0]?.name ?? "the module body";
   const hours = mockFileHours(file.id);
-  const step = (share: number): [number, number] => [round1(hours * share * 0.8), round1(hours * share * 1.2)];
+  const step = (share: number): [number, number] => [
+    round1(hours * share * 0.8),
+    round1(hours * share * 1.2),
+  ];
   return {
     summary: `Reduce the maintenance risk of ${file.path} by covering it with tests, then splitting ${fn} into smaller functions.`,
     steps: [
-      { order: 1, action: `Add characterisation tests for ${fn}`, targets: [file.path], effort_hours: step(0.4) },
-      { order: 2, action: `Split ${fn} into smaller functions`, targets: [`${file.path}::${fn}`], effort_hours: step(0.4) },
-      { order: 3, action: "Remove dead branches and inline single-use helpers", targets: [file.path], effort_hours: step(0.2) },
+      {
+        order: 1,
+        action: `Add characterisation tests for ${fn}`,
+        targets: [file.path],
+        effort_hours: step(0.4),
+      },
+      {
+        order: 2,
+        action: `Split ${fn} into smaller functions`,
+        targets: [`${file.path}::${fn}`],
+        effort_hours: step(0.4),
+      },
+      {
+        order: 3,
+        action: "Remove dead branches and inline single-use helpers",
+        targets: [file.path],
+        effort_hours: step(0.2),
+      },
     ],
     tests_to_add: [`test_${fn}_handles_empty_input`, `test_${fn}_keeps_current_results`],
     risks: [

@@ -9,14 +9,16 @@ const MAX_URL_LENGTH = 2048;
 const PART = /^[A-Za-z0-9_.-]{1,100}$/;
 const EXAMPLE = "https://github.com/owner/name";
 
-type Parsed = { ok: true; host: string; owner: string; name: string } | { ok: false; error: string };
+type Parsed =
+  { ok: true; host: string; owner: string; name: string } | { ok: false; error: string };
 
 function parse(input: string): Parsed {
   const url = input.trim();
   const fail = (error: string): Parsed => ({ ok: false, error });
   if (url === "") return fail("Enter a repository URL.");
   if (url.length > MAX_URL_LENGTH) return fail("The URL is too long.");
-  if (!/^[\x21-\x7e]+$/.test(url)) return fail("The URL contains spaces or characters that are not allowed.");
+  if (!/^[\x21-\x7e]+$/.test(url))
+    return fail("The URL contains spaces or characters that are not allowed.");
   const scheme = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/(.*)$/.exec(url);
   if (!scheme || scheme[1].toLowerCase() !== "https") return fail("Use an https URL.");
   const rest = scheme[2];
@@ -29,13 +31,15 @@ function parse(input: string): Parsed {
   if (authority.includes("@")) return fail("Remove the user name or password from the URL.");
   const hostPort = /^([A-Za-z0-9.-]+)(?::(\d*))?$/.exec(authority);
   if (!hostPort) return fail("The host name is not valid.");
-  if (hostPort[2] !== undefined && hostPort[2] !== "443") return fail("Use the default https port.");
+  if (hostPort[2] !== undefined && hostPort[2] !== "443")
+    return fail("Use the default https port.");
   const host = hostPort[1].toLowerCase();
   if (!(SUPPORTED_GIT_HOSTS as readonly string[]).includes(host)) {
     return fail("Only GitHub and GitLab repositories are supported.");
   }
   const parts = (path.endsWith("/") ? path.slice(0, -1) : path).split("/");
-  if (parts.length !== 3 || parts[0] !== "") return fail(`Use the repository URL, like ${EXAMPLE}.`);
+  if (parts.length !== 3 || parts[0] !== "")
+    return fail(`Use the repository URL, like ${EXAMPLE}.`);
   let [, owner, name] = parts;
   if (name.toLowerCase().endsWith(".git")) name = name.slice(0, -4);
   for (const part of [owner, name]) {

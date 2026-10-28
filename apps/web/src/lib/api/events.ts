@@ -27,7 +27,8 @@ export function createSseParser(): { push(text: string): SseMessage[] } {
 
   function processLine(line: string, out: SseMessage[]) {
     if (line === "") {
-      if (data.length > 0) out.push({ event: event || "message", data: data.join("\n"), id: lastId });
+      if (data.length > 0)
+        out.push({ event: event || "message", data: data.join("\n"), id: lastId });
       event = "";
       data = [];
       return;
