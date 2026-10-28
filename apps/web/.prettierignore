@@ -1,0 +1,7 @@
+package-lock.json
+.next
+coverage
+playwright-report
+test-results
+next-env.d.ts
+public
