@@ -1,0 +1,248 @@
+# Reason templates for tdp_core.model.explain: one entry per base feature in FEATURE_COLUMNS.
+# Copied into every model bundle as reasons.yaml when the bundle is saved.
+#
+# Keys of an entry:
+#   template:   sentence for a reason (the feature's family raises the file's priority)
+#   mitigation: sentence for a mitigation (the family lowers it)
+#   adjectives: [[threshold, text], ...], thresholds strictly decreasing from at most 100 down to 0;
+#               {adj} is the text of the first pair whose threshold <= percentile
+#   exact:      optional [[value, sentence], ...], used instead of template and mitigation when
+#               the feature's value equals that value (for example no commits at all)
+# Fields: {adj}; {value} the raw feature value; {percentile} 0 to 100 within the repository;
+# {top} = max(1, 100 - percentile); {s} = "" when the value rounds to 1, else "s".
+# Text rules: one line of plain English, no em or en dashes, no pipe or angle-bracket characters.
+# Time windows and shares quoted here (90 days, 6 months, 5% of commits) follow the default settings.
+
+# ---------- S: static structure ----------
+sloc:
+  template: "{adj}: {value:,.0f} line{s} of code (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:,.0f} line{s} of code"
+  adjectives: [[95, "Very large file"], [80, "Large file"], [50, "Mid-sized file"], [20, "Small file"], [0, "Very small file"]]
+cc_sum:
+  template: "{adj}: total cyclomatic complexity of {value:,.0f} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: total cyclomatic complexity of {value:,.0f}"
+  adjectives: [[95, "Very complex file"], [80, "Complex file"], [50, "Moderately complex file"], [0, "Simple file"]]
+cc_mean:
+  template: "{adj}: its functions average a cyclomatic complexity of {value:.1f} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: its functions average a cyclomatic complexity of {value:.1f}"
+  adjectives: [[95, "Very branchy functions"], [80, "Branchy functions"], [50, "Moderately branchy functions"], [0, "Straightforward functions"]]
+  exact: [[0, "No functions to measure"]]
+cc_max:
+  template: "{adj}: its most complex function has a cyclomatic complexity of {value:.0f} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: its most complex function has a cyclomatic complexity of {value:.0f}"
+  adjectives: [[95, "Very complex function"], [80, "Complex function"], [50, "Moderately complex functions"], [0, "Simple functions"]]
+  exact: [[0, "No functions to measure"]]
+cog_max:
+  template: "{adj}: its hardest function has a cognitive complexity of {value:.0f} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: its hardest function has a cognitive complexity of {value:.0f}"
+  adjectives: [[95, "Very hard to follow"], [80, "Hard to follow"], [50, "Moderately hard to follow"], [0, "Easy to follow"]]
+nesting_max:
+  template: "{adj}: code nested {value:.0f} level{s} deep (top {top:.0f}% in repo)"
+  mitigation: "{adj}: code nested at most {value:.0f} level{s} deep"
+  adjectives: [[95, "Very deep nesting"], [80, "Deep nesting"], [50, "Moderate nesting"], [0, "Shallow nesting"]]
+  exact: [[0, "Flat code: no nested blocks"]]
+n_functions:
+  template: "{adj}: {value:,.0f} function{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:,.0f} function{s}"
+  adjectives: [[95, "Very many functions"], [80, "Many functions"], [50, "Some functions"], [0, "Few functions"]]
+  exact: [[0, "No functions"]]
+n_classes:
+  template: "{adj}: {value:,.0f} class definition{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:,.0f} class definition{s}"
+  adjectives: [[95, "Very many classes"], [80, "Many classes"], [50, "Some classes"], [0, "Few classes"]]
+  exact: [[0, "No classes"]]
+longest_function:
+  template: "{adj}: its longest function spans {value:,.0f} line{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: its longest function spans {value:,.0f} line{s}"
+  adjectives: [[95, "Very long function"], [80, "Long function"], [50, "Medium-length functions"], [0, "Short functions"]]
+  exact: [[0, "No functions"]]
+params_max:
+  template: "{adj}: a function takes {value:.0f} parameter{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: no function takes more than {value:.0f} parameter{s}"
+  adjectives: [[95, "Very long parameter list"], [80, "Long parameter list"], [50, "Moderate parameter lists"], [0, "Short parameter lists"]]
+  exact: [[0, "No function takes parameters"]]
+dup_ratio:
+  template: "{adj}: {value:.0%} of its code is duplicated (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.0%} of its code is duplicated"
+  adjectives: [[95, "Heavy duplication"], [80, "Notable duplication"], [50, "Some duplication"], [0, "Little duplication"]]
+  exact: [[0, "No duplicated code found"]]
+
+# ---------- E: evolution ----------
+commits_total:
+  template: "{adj}: {value:,.0f} commit{s} in the analysed history (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:,.0f} commit{s} in the analysed history"
+  adjectives: [[95, "Very frequently changed"], [80, "Frequently changed"], [50, "Regularly changed"], [0, "Rarely changed"]]
+  exact: [[0, "No commits in the analysed history"]]
+commits_90d:
+  template: "{adj} changed: {value:.0f} commit{s} in the last 90 days (top {top:.0f}% in repo)"
+  mitigation: "{adj} changed: {value:.0f} commit{s} in the last 90 days"
+  adjectives: [[95, "Very often"], [80, "Often"], [50, "Sometimes"], [0, "Rarely"]]
+  exact: [[0, "Not changed in the last 90 days"]]
+commits_180d:
+  template: "{adj} changed: {value:.0f} commit{s} in the last 6 months (top {top:.0f}% in repo)"
+  mitigation: "{adj} changed: {value:.0f} commit{s} in the last 6 months"
+  adjectives: [[95, "Very often"], [80, "Often"], [50, "Regularly"], [0, "Rarely"]]
+  exact: [[0, "Not changed in the last 6 months"]]
+commits_decayed:
+  template: "{adj}: {value:.1f} recency-weighted commits (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.1f} recency-weighted commits"
+  adjectives: [[95, "Very busy lately"], [80, "Busy lately"], [50, "Some recent activity"], [0, "Quiet lately"]]
+  exact: [[0, "No commits in the analysed history"]]
+churn_total:
+  template: "{adj}: {value:,.0f} line{s} added or deleted in the analysed history (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:,.0f} line{s} added or deleted in the analysed history"
+  adjectives: [[95, "Very high churn"], [80, "High churn"], [50, "Moderate churn"], [0, "Low churn"]]
+  exact: [[0, "No lines changed in the analysed history"]]
+churn_decayed:
+  template: "{adj}: {value:,.0f} recency-weighted lines added or deleted (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:,.0f} recency-weighted lines added or deleted"
+  adjectives: [[95, "Very high recent churn"], [80, "High recent churn"], [50, "Moderate recent churn"], [0, "Low recent churn"]]
+  exact: [[0, "No recent churn"]]
+rel_churn_decayed:
+  template: "{adj}: recent changes add up to {value:.1f} times its size (top {top:.0f}% in repo)"
+  mitigation: "{adj}: recent changes add up to {value:.1f} times its size"
+  adjectives: [[95, "Heavily reworked"], [80, "Often reworked"], [50, "Sometimes reworked"], [0, "Stable code"]]
+  exact: [[0, "Stable code: no recent changes"]]
+age_days:
+  template: "{adj}: first seen {value:,.0f} day{s} ago"
+  mitigation: "{adj}: first seen {value:,.0f} day{s} ago"
+  adjectives: [[80, "Long-lived file"], [20, "Established file"], [0, "Young file"]]
+staleness_days:
+  template: "{adj}: last changed {value:,.0f} day{s} ago"
+  mitigation: "{adj}: last changed {value:,.0f} day{s} ago"
+  adjectives: [[80, "Untouched for a long time"], [20, "Changed a while ago"], [0, "Changed recently"]]
+cc_trend:
+  template: "{adj}: total complexity changes by {value:+.1f} per year (top {top:.0f}% in repo)"
+  mitigation: "{adj}: total complexity changes by {value:+.1f} per year"
+  adjectives: [[95, "Complexity rising fast"], [80, "Complexity rising"], [20, "Complexity steady"], [0, "Complexity falling"]]
+  exact: [[0, "Complexity unchanged over the past year"]]
+burstiness:
+  template: "{adj}: the gaps between its commits vary by {value:.1f} times their average (top {top:.0f}% in repo)"
+  mitigation: "{adj}: the gaps between its commits vary by {value:.1f} times their average"
+  adjectives: [[95, "Very bursty changes"], [80, "Bursty changes"], [50, "Uneven changes"], [0, "Steady pace of change"]]
+  exact: [[0, "Too few commits to show a pattern of change"]]
+is_new:
+  template: "{adj}"
+  mitigation: "{adj}"
+  adjectives: [[100, "New file: first seen less than 90 days ago"], [0, "Not a new file: first seen at least 90 days ago"]]
+
+# ---------- O: ownership ----------
+n_authors:
+  template: "{adj}: changed by {value:.0f} author{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: changed by {value:.0f} author{s}"
+  adjectives: [[95, "Very many authors"], [80, "Many authors"], [50, "Multiple authors"], [0, "Few authors"]]
+  exact: [[0, "No authors in the analysed history"], [1, "Single author: changed by one person"]]
+owner_share:
+  template: "{adj}: its main author made {value:.0%} of its commits"
+  mitigation: "{adj}: its main author made {value:.0%} of its commits"
+  adjectives: [[80, "Concentrated ownership"], [20, "Shared ownership"], [0, "Diffuse ownership"]]
+  exact: [[0, "No owner in the analysed history"]]
+minor_authors:
+  template: "{adj}: {value:.0f} minor contributor{s}, each with under 5% of its commits (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.0f} minor contributor{s}, each with under 5% of its commits"
+  adjectives: [[95, "Very many minor contributors"], [80, "Many minor contributors"], [50, "Some minor contributors"], [0, "Few minor contributors"]]
+  exact: [[0, "No minor contributors"]]
+author_entropy:
+  template: "{adj}: commits spread across authors with {value:.1f} bits of entropy (top {top:.0f}% in repo)"
+  mitigation: "{adj}: commits spread across authors with {value:.1f} bits of entropy"
+  adjectives: [[95, "Very scattered ownership"], [80, "Scattered ownership"], [50, "Mixed ownership"], [0, "Focused ownership"]]
+  exact: [[0, "Focused ownership: at most one author"]]
+owner_active:
+  template: "{adj}"
+  mitigation: "{adj}"
+  adjectives: [[100, "Main author still active: committed in the last 90 days"], [0, "No active owner: its main author has not committed in the last 90 days"]]
+
+# ---------- D: defect history ----------
+prior_bugfix_commits:
+  template: "{adj}: {value:.0f} bug-fix commit{s} in the analysed history (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.0f} bug-fix commit{s} in the analysed history"
+  adjectives: [[95, "Very frequently fixed"], [80, "Frequently fixed"], [50, "Fixed before"], [0, "Rarely fixed"]]
+  exact: [[0, "No bug-fix commits in the analysed history"]]
+prior_latent_bugs:
+  template: "{adj}: {value:.0f} past bug{s} traced back to its code (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.0f} past bug{s} traced back to its code"
+  adjectives: [[95, "Many past bugs"], [80, "Several past bugs"], [50, "Some past bugs"], [0, "Few past bugs"]]
+  exact: [[0, "No past bugs traced back to its code"]]
+
+# ---------- I: impact ----------
+fan_in:
+  template: "{adj}: imported by {value:.0f} file{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: imported by {value:.0f} file{s}"
+  adjectives: [[95, "Very widely used"], [80, "Widely used"], [50, "Used by other files"], [0, "Rarely imported"]]
+  exact: [[0, "No other file imports it"]]
+fan_out:
+  template: "{adj}: imports {value:.0f} file{s} of this repository (top {top:.0f}% in repo)"
+  mitigation: "{adj}: imports {value:.0f} file{s} of this repository"
+  adjectives: [[95, "Very many dependencies"], [80, "Many dependencies"], [50, "Some dependencies"], [0, "Few dependencies"]]
+  exact: [[0, "Imports no other file of this repository"]]
+transitive_dependents:
+  template: "{adj}: a change can affect {value:,.0f} dependent file{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: a change can affect {value:,.0f} dependent file{s}"
+  adjectives: [[95, "Very large blast radius"], [80, "Large blast radius"], [50, "Moderate blast radius"], [0, "Small blast radius"]]
+  exact: [[0, "No other file depends on it"]]
+pagerank:
+  template: "{adj} in the import graph (top {top:.0f}% in repo by PageRank)"
+  mitigation: "{adj} in the import graph"
+  adjectives: [[95, "Core module"], [80, "Central module"], [50, "Connected module"], [0, "Peripheral module"]]
+betweenness:
+  template: "{adj} between other files in the import graph (top {top:.0f}% in repo by betweenness)"
+  mitigation: "{adj} between other files in the import graph"
+  adjectives: [[95, "Key bridge"], [80, "Bridge"], [50, "Minor bridge"], [0, "Rarely a bridge"]]
+  exact: [[0, "Not on any import path between other files"]]
+scc_size:
+  template: "Import cycle: one of {value:.0f} files that import each other in a loop (top {top:.0f}% in repo)"
+  mitigation: "Import cycle of {value:.0f} files"
+  exact: [[1, "Not part of an import cycle"]]
+cochange_partners:
+  template: "{adj}: often changes together with {value:.0f} other file{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: often changes together with {value:.0f} other file{s}"
+  adjectives: [[95, "Very tightly coupled"], [80, "Tightly coupled"], [50, "Coupled"], [0, "Loosely coupled"]]
+  exact: [[0, "Changes on its own: no file regularly changes with it"]]
+cochange_max_conf:
+  template: "{adj}: {value:.0%} of its commits also change the same other file (top {top:.0f}% in repo)"
+  mitigation: "{adj}: at most {value:.0%} of its commits also change any one other file"
+  adjectives: [[95, "Locked to another file"], [80, "Strongly tied to another file"], [50, "Tied to another file"], [0, "Loosely tied to other files"]]
+  exact: [[0, "No file changes with it often enough to measure"]]
+hidden_coupling:
+  template: "{adj}: changes together with {value:.0f} file{s} it has no import link with (top {top:.0f}% in repo)"
+  mitigation: "{adj}: changes together with {value:.0f} file{s} it has no import link with"
+  adjectives: [[95, "Heavy hidden coupling"], [80, "Hidden coupling"], [50, "Some hidden coupling"], [0, "Little hidden coupling"]]
+  exact: [[0, "No hidden coupling"]]
+
+# ---------- T: tests ----------
+has_test_file:
+  template: "{adj}"
+  mitigation: "{adj}"
+  adjectives: [[100, "Has a matching test file"], [0, "No test file named after it"]]
+test_importers:
+  template: "{adj}: imported by {value:.0f} test file{s}"
+  mitigation: "{adj}: imported by {value:.0f} test file{s}"
+  adjectives: [[80, "Well tested"], [50, "Some tests"], [0, "Few tests"]]
+  exact: [[0, "No test file imports it"]]
+test_cochange_rate:
+  template: "{adj}: {value:.0%} of its commits also change a test file"
+  mitigation: "{adj}: {value:.0%} of its commits also change a test file"
+  adjectives: [[80, "Tests usually change with it"], [50, "Tests often change with it"], [0, "Tests seldom change with it"]]
+  exact: [[0, "None of its commits also change a test file"]]
+pkg_test_ratio:
+  template: "{adj}: its package has {value:.2f} lines of test code per line of code"
+  mitigation: "{adj}: its package has {value:.2f} lines of test code per line of code"
+  adjectives: [[80, "Well-tested package"], [50, "Moderately tested package"], [0, "Thinly tested package"]]
+  exact: [[0, "No test imports its package"]]
+
+# ---------- Q: self-admitted debt ----------
+satd_count:
+  template: "{adj}: {value:.0f} TODO, FIXME or HACK style comment{s} (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.0f} TODO, FIXME or HACK style comment{s}"
+  adjectives: [[95, "Lots of admitted debt"], [80, "Admitted debt"], [0, "Some admitted debt"]]
+  exact: [[0, "No TODO, FIXME or HACK style comments"]]
+satd_density:
+  template: "{adj}: {value:.1f} debt comments per 1,000 lines (top {top:.0f}% in repo)"
+  mitigation: "{adj}: {value:.1f} debt comments per 1,000 lines"
+  adjectives: [[95, "Dense admitted debt"], [80, "Frequent admitted debt"], [0, "Occasional admitted debt"]]
+  exact: [[0, "No debt comments"]]
+satd_age_days:
+  template: "{adj}: its oldest debt comment is {value:,.0f} day{s} old (top {top:.0f}% in repo)"
+  mitigation: "{adj}: its oldest debt comment is {value:,.0f} day{s} old"
+  adjectives: [[95, "Very old admitted debt"], [80, "Old admitted debt"], [0, "Recent admitted debt"]]
+  exact: [[0, "No dated debt comments"]]
