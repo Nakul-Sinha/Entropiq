@@ -1,0 +1,536 @@
+{
+  "format": "tdp-report",
+  "format_version": 1,
+  "tool": {
+    "name": "tdp",
+    "version": "0.0.0"
+  },
+  "sha": "0123456789abcdef0123456789abcdef01234567",
+  "analyzed_at": "2026-01-15T09:30:05Z",
+  "model_version": "dev-20260115T093005Z",
+  "extractor_version": "1",
+  "summary": {
+    "files": 5,
+    "critical": 1,
+    "high": 2,
+    "medium": 1,
+    "low": 1,
+    "critical_hours": 12.5,
+    "debt_types": {
+      "complexity": 0,
+      "duplication": 1,
+      "test": 1,
+      "architecture": 1,
+      "knowledge": 1,
+      "admitted": 1,
+      "defect_hotspot": 1
+    },
+    "priority_histogram": [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      2,
+      1
+    ]
+  },
+  "files": [
+    {
+      "path": "src/payments/processor.py",
+      "score": 2.31,
+      "priority": 95,
+      "band": "Critical",
+      "risk": 0.64,
+      "risk_low": 0.55,
+      "risk_high": 0.72,
+      "reasons": [
+        {
+          "family": "E",
+          "feature": "churn_decayed",
+          "value": 831.0,
+          "percentile": 99.0,
+          "shap": 0.92,
+          "text": "Very high recent churn: 831 recency-weighted lines added or deleted (top 1% in repo)"
+        },
+        {
+          "family": "D",
+          "feature": "prior_latent_bugs",
+          "value": 4.0,
+          "percentile": 99.0,
+          "shap": 0.61,
+          "text": "Many past bugs: 4 past bugs traced back to its code (top 1% in repo)"
+        },
+        {
+          "family": "T",
+          "feature": "has_test_file",
+          "value": 0.0,
+          "percentile": 0.0,
+          "shap": 0.33,
+          "text": "No test file named after it"
+        },
+        {
+          "family": "S",
+          "feature": "cc_max",
+          "value": 31.0,
+          "percentile": 97.0,
+          "shap": 0.12,
+          "text": "Very complex function: its most complex function has a cyclomatic complexity of 31 (top 3% in repo)"
+        }
+      ],
+      "mitigations": [
+        {
+          "family": "O",
+          "feature": "n_authors",
+          "value": 2.0,
+          "percentile": 40.0,
+          "shap": -0.2,
+          "text": "Few authors: changed by 2 authors"
+        }
+      ],
+      "debt_types": [
+        "defect_hotspot",
+        "test"
+      ],
+      "shap_by_family": {
+        "S": 0.12,
+        "E": 0.92,
+        "O": -0.2,
+        "D": 0.61,
+        "I": 0.0,
+        "T": 0.33,
+        "Q": 0.0
+      },
+      "features": {
+        "sloc": 640.0,
+        "cc_max": 31.0,
+        "dup_ratio": 0.05,
+        "pct_sloc": 1.0
+      }
+    },
+    {
+      "path": "src/billing/invoice.py",
+      "score": 1.42,
+      "priority": 81,
+      "band": "High",
+      "risk": 0.41,
+      "risk_low": 0.33,
+      "risk_high": 0.5,
+      "reasons": [
+        {
+          "family": "I",
+          "feature": "pagerank",
+          "value": 0.031,
+          "percentile": 91.0,
+          "shap": 0.4,
+          "text": "Central module in the import graph (top 9% in repo by PageRank)"
+        },
+        {
+          "family": "O",
+          "feature": "n_authors",
+          "value": 9.0,
+          "percentile": 96.0,
+          "shap": 0.25,
+          "text": "Very many authors: changed by 9 authors (top 4% in repo)"
+        }
+      ],
+      "mitigations": [],
+      "debt_types": [
+        "architecture",
+        "knowledge"
+      ],
+      "shap_by_family": {
+        "S": 0.0,
+        "E": 0.0,
+        "O": 0.25,
+        "D": 0.0,
+        "I": 0.4,
+        "T": 0.0,
+        "Q": 0.0
+      },
+      "features": {
+        "sloc": 410.0,
+        "cc_max": 12.0,
+        "dup_ratio": 0.1,
+        "pct_sloc": 0.8
+      }
+    },
+    {
+      "path": "src/legacy/old utils.py",
+      "score": 1.38,
+      "priority": 81,
+      "band": "High",
+      "risk": 0.35,
+      "risk_low": 0.27,
+      "risk_high": 0.44,
+      "reasons": [
+        {
+          "family": "S",
+          "feature": "dup_ratio",
+          "value": 0.32,
+          "percentile": 97.0,
+          "shap": 0.3,
+          "text": "Heavy duplication: 32% of its code is duplicated (top 3% in repo)"
+        }
+      ],
+      "mitigations": [],
+      "debt_types": [
+        "duplication"
+      ],
+      "shap_by_family": {
+        "S": 0.3,
+        "E": 0.0,
+        "O": 0.0,
+        "D": 0.0,
+        "I": 0.0,
+        "T": 0.0,
+        "Q": 0.0
+      },
+      "features": {
+        "sloc": 220.0,
+        "cc_max": 9.0,
+        "dup_ratio": 0.32,
+        "pct_sloc": 0.6
+      }
+    },
+    {
+      "path": "src/pkg/__init__.py",
+      "score": 0.52,
+      "priority": 60,
+      "band": "Medium",
+      "risk": 0.18,
+      "risk_low": 0.12,
+      "risk_high": 0.25,
+      "reasons": [
+        {
+          "family": "Q",
+          "feature": "satd_count",
+          "value": 3.0,
+          "percentile": 88.0,
+          "shap": 0.15,
+          "text": "Admitted debt: 3 TODO, FIXME or HACK style comments (top 12% in repo)"
+        }
+      ],
+      "mitigations": [],
+      "debt_types": [
+        "admitted"
+      ],
+      "shap_by_family": {
+        "S": 0.0,
+        "E": 0.0,
+        "O": 0.0,
+        "D": 0.0,
+        "I": 0.0,
+        "T": 0.0,
+        "Q": 0.15
+      },
+      "features": {
+        "sloc": 35.0,
+        "cc_max": 2.0,
+        "dup_ratio": 0.0,
+        "pct_sloc": 0.4
+      }
+    },
+    {
+      "path": "setup.py",
+      "score": -0.8,
+      "priority": 12,
+      "band": "Low",
+      "risk": 0.03,
+      "risk_low": 0.01,
+      "risk_high": 0.06,
+      "reasons": [],
+      "mitigations": [],
+      "debt_types": [],
+      "shap_by_family": {
+        "S": 0.0,
+        "E": 0.0,
+        "O": 0.0,
+        "D": 0.0,
+        "I": 0.0,
+        "T": 0.0,
+        "Q": 0.0
+      },
+      "features": {
+        "sloc": 20.0,
+        "cc_max": 1.0,
+        "dup_ratio": 0.0,
+        "pct_sloc": 0.2
+      }
+    }
+  ],
+  "extras": {
+    "src/billing/invoice.py": {
+      "blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "functions": [
+        {
+          "name": "total",
+          "start_line": 30,
+          "end_line": 60,
+          "cyclomatic": 7,
+          "cognitive": 9,
+          "max_nesting": 2,
+          "params": 1
+        },
+        {
+          "name": "Invoice.render",
+          "start_line": 12,
+          "end_line": 25,
+          "cyclomatic": 7,
+          "cognitive": 9,
+          "max_nesting": 2,
+          "params": 1
+        }
+      ],
+      "dependents": [],
+      "dependencies": [],
+      "test_importers": [],
+      "commit_activity": [],
+      "cost": {
+        "hours": 7.5,
+        "low": 6.0,
+        "high": 9.0,
+        "breakdown": {
+          "complexity": 225.0,
+          "duplication": 0.0,
+          "tests": 225.0,
+          "cycle": 0.0,
+          "satd": 0.0
+        }
+      }
+    },
+    "src/legacy/old utils.py": {
+      "blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "functions": [],
+      "dependents": [],
+      "dependencies": [],
+      "test_importers": [],
+      "commit_activity": [],
+      "cost": {
+        "hours": 7.5,
+        "low": 6.0,
+        "high": 9.0,
+        "breakdown": {
+          "complexity": 225.0,
+          "duplication": 0.0,
+          "tests": 225.0,
+          "cycle": 0.0,
+          "satd": 0.0
+        }
+      }
+    },
+    "src/payments/processor.py": {
+      "blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "functions": [
+        {
+          "name": "Processor.charge",
+          "start_line": 40,
+          "end_line": 95,
+          "cyclomatic": 18,
+          "cognitive": 25,
+          "max_nesting": 2,
+          "params": 1
+        },
+        {
+          "name": "Processor.refund",
+          "start_line": 120,
+          "end_line": 160,
+          "cyclomatic": 18,
+          "cognitive": 30,
+          "max_nesting": 2,
+          "params": 1
+        },
+        {
+          "name": "helper",
+          "start_line": 10,
+          "end_line": 20,
+          "cyclomatic": 2,
+          "cognitive": 1,
+          "max_nesting": 2,
+          "params": 1
+        }
+      ],
+      "dependents": [
+        "src/api/views.py"
+      ],
+      "dependencies": [
+        "src/billing/invoice.py"
+      ],
+      "test_importers": [],
+      "commit_activity": [
+        [
+          "2025-12",
+          4
+        ],
+        [
+          "2026-01",
+          7
+        ]
+      ],
+      "cost": {
+        "hours": 12.5,
+        "low": 10.0,
+        "high": 15.0,
+        "breakdown": {
+          "complexity": 375.0,
+          "duplication": 0.0,
+          "tests": 375.0,
+          "cycle": 0.0,
+          "satd": 0.0
+        }
+      }
+    },
+    "src/pkg/__init__.py": {
+      "blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "functions": [],
+      "dependents": [],
+      "dependencies": [],
+      "test_importers": [],
+      "commit_activity": [],
+      "cost": {
+        "hours": 2.0,
+        "low": 1.6,
+        "high": 2.4,
+        "breakdown": {
+          "complexity": 60.0,
+          "duplication": 0.0,
+          "tests": 60.0,
+          "cycle": 0.0,
+          "satd": 0.0
+        }
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "src/payments/processor.py",
+        "priority": 95,
+        "band": "Critical",
+        "sloc": 640,
+        "dependents": 1
+      },
+      {
+        "id": "src/billing/invoice.py",
+        "priority": 81,
+        "band": "High",
+        "sloc": 410,
+        "dependents": 2
+      },
+      {
+        "id": "src/legacy/old utils.py",
+        "priority": 81,
+        "band": "High",
+        "sloc": 220,
+        "dependents": 0
+      },
+      {
+        "id": "src/pkg/__init__.py",
+        "priority": 60,
+        "band": "Medium",
+        "sloc": 35,
+        "dependents": 0
+      },
+      {
+        "id": "setup.py",
+        "priority": 12,
+        "band": "Low",
+        "sloc": 20,
+        "dependents": 0
+      }
+    ],
+    "edges": [
+      {
+        "source": "src/payments/processor.py",
+        "target": "src/billing/invoice.py",
+        "kind": "import",
+        "weight": 1.0
+      },
+      {
+        "source": "src/billing/invoice.py",
+        "target": "src/legacy/old utils.py",
+        "kind": "hidden_coupling",
+        "weight": 0.62
+      }
+    ]
+  },
+  "plan": {
+    "budget_hours": 40.0,
+    "steps": [
+      {
+        "order": 1,
+        "path": "src/billing/invoice.py",
+        "benefit": 0.95,
+        "cost": {
+          "hours": 7.5,
+          "low": 6.0,
+          "high": 9.0,
+          "breakdown": {
+            "complexity": 225.0,
+            "duplication": 0.0,
+            "tests": 225.0,
+            "cycle": 0.0,
+            "satd": 0.0
+          }
+        },
+        "roi": 0.127,
+        "group": 1,
+        "reason": "fix before src/payments/processor.py, which depends on it"
+      },
+      {
+        "order": 2,
+        "path": "src/payments/processor.py",
+        "benefit": 1.9,
+        "cost": {
+          "hours": 12.5,
+          "low": 10.0,
+          "high": 15.0,
+          "breakdown": {
+            "complexity": 375.0,
+            "duplication": 0.0,
+            "tests": 375.0,
+            "cycle": 0.0,
+            "satd": 0.0
+          }
+        },
+        "roi": 0.152,
+        "group": 2,
+        "reason": "best return on effort among the remaining files"
+      },
+      {
+        "order": 3,
+        "path": "src/legacy/old utils.py",
+        "benefit": 0.7,
+        "cost": {
+          "hours": 7.5,
+          "low": 6.0,
+          "high": 9.0,
+          "breakdown": {
+            "complexity": 225.0,
+            "duplication": 0.0,
+            "tests": 225.0,
+            "cycle": 0.0,
+            "satd": 0.0
+          }
+        },
+        "roi": 0.093,
+        "group": 3,
+        "reason": "fix before src/pkg/__init__.py, which depends on it"
+      }
+    ],
+    "total_benefit": 3.55,
+    "total_hours": 27.5
+  },
+  "stats": {
+    "n_files": 5,
+    "skipped": 2,
+    "timings_s": {
+      "mine": 1.5,
+      "parse": 0.75,
+      "features": 2.25
+    }
+  }
+}

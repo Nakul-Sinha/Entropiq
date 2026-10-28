@@ -1,0 +1,166 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "tdp",
+          "version": "0.0.0",
+          "rules": [
+            {
+              "id": "tdp/critical",
+              "name": "CriticalMaintenancePriority",
+              "shortDescription": {
+                "text": "Critical maintenance priority"
+              },
+              "fullDescription": {
+                "text": "Priority 90 to 100 out of 100, a percentile within the repository: the file is among the most likely to need bug fixes and rework in the next 12 months."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "Priority is a percentile within the repository, computed from code structure, change history, ownership, past bugs, dependencies, tests and admitted debt. The alert message lists the strongest reasons. Before a risky change, consider adding tests or simplifying the code those reasons point to."
+              },
+              "properties": {
+                "tags": [
+                  "maintainability",
+                  "technical-debt"
+                ]
+              }
+            },
+            {
+              "id": "tdp/high",
+              "name": "HighMaintenancePriority",
+              "shortDescription": {
+                "text": "High maintenance priority"
+              },
+              "fullDescription": {
+                "text": "Priority 75 to 89 out of 100, a percentile within the repository: the file is more likely than most to need bug fixes and rework in the next 12 months."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "help": {
+                "text": "Priority is a percentile within the repository, computed from code structure, change history, ownership, past bugs, dependencies, tests and admitted debt. The alert message lists the strongest reasons. Before a risky change, consider adding tests or simplifying the code those reasons point to."
+              },
+              "properties": {
+                "tags": [
+                  "maintainability",
+                  "technical-debt"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "tdp/critical",
+          "ruleIndex": 0,
+          "level": "warning",
+          "rank": 95.0,
+          "message": {
+            "text": "Critical maintenance priority: 95 of 100. Estimated chance that a bug in its current code is fixed within 12 months: 64% (55% to 72%). Top reasons: Very high recent churn: 831 recency-weighted lines added or deleted (top 1% in repo); Many past bugs: 4 past bugs traced back to its code (top 1% in repo); No test file named after it."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/payments/processor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 120
+                }
+              }
+            }
+          ],
+          "properties": {
+            "priority": 95,
+            "band": "Critical",
+            "risk": 0.64,
+            "risk_low": 0.55,
+            "risk_high": 0.72,
+            "debt_types": [
+              "defect_hotspot",
+              "test"
+            ]
+          }
+        },
+        {
+          "ruleId": "tdp/high",
+          "ruleIndex": 1,
+          "level": "note",
+          "rank": 81.0,
+          "message": {
+            "text": "High maintenance priority: 81 of 100. Estimated chance that a bug in its current code is fixed within 12 months: 41% (33% to 50%). Top reasons: Central module in the import graph (top 9% in repo by PageRank); Very many authors: changed by 9 authors (top 4% in repo)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/billing/invoice.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12
+                }
+              }
+            }
+          ],
+          "properties": {
+            "priority": 81,
+            "band": "High",
+            "risk": 0.41,
+            "risk_low": 0.33,
+            "risk_high": 0.5,
+            "debt_types": [
+              "architecture",
+              "knowledge"
+            ]
+          }
+        },
+        {
+          "ruleId": "tdp/high",
+          "ruleIndex": 1,
+          "level": "note",
+          "rank": 81.0,
+          "message": {
+            "text": "High maintenance priority: 81 of 100. Estimated chance that a bug in its current code is fixed within 12 months: 35% (27% to 44%). Top reason: Heavy duplication: 32% of its code is duplicated (top 3% in repo)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/legacy/old%20utils.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "priority": 81,
+            "band": "High",
+            "risk": 0.35,
+            "risk_low": 0.27,
+            "risk_high": 0.44,
+            "debt_types": [
+              "duplication"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "sha": "0123456789abcdef0123456789abcdef01234567",
+        "analyzed_at": "2026-01-15T09:30:05Z",
+        "model_version": "dev-20260115T093005Z",
+        "extractor_version": "1"
+      }
+    }
+  ]
+}
