@@ -527,11 +527,11 @@ def test_repo_lock(fake_redis: fakeredis.FakeRedis) -> None:
     assert first.release()
     assert not fake_redis.exists(name)
     assert not first.release()
+    third = RepoLock(fake_redis, name, wait_s=0)
     with second:
         assert fake_redis.exists(name)
-        with pytest.raises(tasks.RepositoryBusyError, match="Another analysis is fetching"):
-            with RepoLock(fake_redis, name, wait_s=0):
-                pass
+        with pytest.raises(tasks.RepositoryBusyError, match="Another analysis is fetching"), third:
+            pass
     assert not fake_redis.exists(name)
 
 
