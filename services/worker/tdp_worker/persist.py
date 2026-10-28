@@ -4,8 +4,8 @@ The tasks talk to a :class:`Store`, a small synchronous interface with the state
 ``tdp_platform.db.repos`` (P5.1): ``set_running`` from queued or running, ``set_progress`` while queued or
 running, ``set_failed`` from queued or running, and success (``save_results``) only from running. Every
 transition returns False when the row was not in an allowed state. :class:`PostgresStore` implements it on
-the P5.1 repositories (async SQLAlchemy on asyncpg, bridged with :func:`run_coro`); tests use the in-memory
-:class:`tdp_worker.testing.MemoryStore`.
+the platform repositories (async SQLAlchemy on asyncpg, bridged with :func:`run_coro`); the worker tests use
+an in-memory store with the same rules.
 
 The pure builders turn an ``AnalysisResult`` into the stored bodies of plan section 3.7: the summary
 (:func:`build_summary`), the treemap (:func:`build_treemap`) and the file rows with per-feature SHAP values

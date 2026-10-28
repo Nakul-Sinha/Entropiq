@@ -5,10 +5,8 @@ from __future__ import annotations
 
 import json
 import random
-import subprocess
 import uuid
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -26,7 +24,6 @@ from tdp_core.contracts import (
     CostEstimate,
     FileExtra,
     FileScore,
-    FileSyntax,
     FunctionInfo,
     GraphData,
     GraphEdge,
@@ -36,16 +33,14 @@ from tdp_core.contracts import (
     Reason,
     band_for,
 )
-from tdp_core.features.cache import StaticCache
 from tdp_core.model.bundle import Bundle, load_bundle, make_dev_bundle
 from tdp_core.testing import RepoBuilder
-from tdp_platform.db.rows import FileResultRow
 from tdp_platform.settings import get_settings
 from tdp_worker import persist, progress, tasks
 from tdp_worker.app import app, reset_process_state
-from tdp_worker.persist import AnalysisInfo, FileInfo, ResultPayload, score_from_row
-from tdp_worker.progress import ProgressEvent
+from tdp_worker.persist import AnalysisInfo
 from tdp_worker.tasks import MirrorSource
+from tdp_worker.testing import DEFAULT_MODEL_VERSION, EventLog, MemoryStore, SourceRepo
 
 SETTINGS_ENV_VARS = (
     "DATABASE_URL",
@@ -62,8 +57,7 @@ SETTINGS_ENV_VARS = (
     "TDP_MODELS_DIR",
     "TDP_DATA_DIR",
 )
-DEV_VERSION = "dev-worker"
-REPOSITORY_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+DEV_VERSION = DEFAULT_MODEL_VERSION
 T0 = datetime(2026, 1, 5, 12, tzinfo=UTC)
 
 
@@ -90,23 +84,6 @@ def dev_bundle(models_dir: Path) -> Bundle:
 
 
 # ---------- source repository ----------
-
-
-@dataclass(frozen=True)
-class SourceRepo:
-    path: Path
-    first: str
-    head: str
-
-    def blob(self, rel: str, rev: str | None = None) -> str:
-        """The blob sha of ``rel`` at ``rev`` (default the head commit)."""
-        out = subprocess.run(
-            ["git", "rev-parse", f"{rev or self.head}:{rel}"],
-            cwd=self.path,
-            check=True,
-            capture_output=True,
-        )
-        return out.stdout.decode().strip()
 
 
 CORE_V1 = lines("def run(x):", "    if x > 0:", "        return x * 2", "    return 0")
@@ -197,198 +174,6 @@ def fake_redis(worker_env: dict[str, Path]) -> fakeredis.FakeRedis:
 # ---------- in-memory store ----------
 
 
-class RecordingCache:
-    """A dict-backed ``StaticCache`` that counts puts and hits."""
-
-    def __init__(self) -> None:
-        self.data: dict[str, FileSyntax] = {}
-        self.puts = 0
-        self.hits = 0
-
-    def get(self, blob_sha: str) -> FileSyntax | None:
-        found = self.data.get(blob_sha)
-        if found is not None:
-            self.hits += 1
-        return found
-
-    def put(self, blob_sha: str, syntax: FileSyntax) -> None:
-        self.puts += 1
-        self.data[blob_sha] = syntax
-
-
-@dataclass
-class AdviceRow:
-    file_result_id: int
-    model: str
-    status: str
-    body: dict[str, Any] | None = None
-    error: str | None = None
-
-
-class MemoryStore:
-    """An in-memory ``Store`` with the state rules of the platform repositories."""
-
-    def __init__(self) -> None:
-        self.analyses: dict[uuid.UUID, dict[str, Any]] = {}
-        self.files: dict[uuid.UUID, list[FileResultRow]] = {}
-        self.file_rows: dict[int, tuple[uuid.UUID, FileResultRow]] = {}
-        self.artifacts: dict[tuple[uuid.UUID, str], Any] = {}
-        self.plans: dict[tuple[uuid.UUID, float], Any] = {}
-        self.advice: dict[str, AdviceRow] = {}
-        self.progress_log: list[tuple[uuid.UUID, str, int]] = []
-        self.cache: StaticCache | None = None
-        self.closed = False
-        self._next_file_id = 1
-
-    # ----- helpers for tests
-
-    def add_analysis(
-        self,
-        *,
-        commit_sha: str,
-        model_version: str = DEV_VERSION,
-        budget_hours: float = 40.0,
-        url: str = "https://github.com/acme/demo",
-        host: str = "github.com",
-        owner: str = "acme",
-        name: str = "demo",
-        status: str = "queued",
-        repository_id: uuid.UUID = REPOSITORY_ID,
-    ) -> uuid.UUID:
-        aid = uuid.uuid4()
-        self.analyses[aid] = {
-            "repository_id": repository_id,
-            "url": url,
-            "host": host,
-            "owner": owner,
-            "name": name,
-            "commit_sha": commit_sha,
-            "model_version": model_version,
-            "budget_hours": budget_hours,
-            "status": status,
-            "stage": None,
-            "progress": 0,
-            "error": None,
-            "summary": None,
-            "stats": None,
-        }
-        return aid
-
-    def add_file(self, analysis_id: uuid.UUID, row: FileResultRow) -> int:
-        fid = self._next_file_id
-        self._next_file_id += 1
-        self.file_rows[fid] = (analysis_id, row)
-        self.files.setdefault(analysis_id, []).append(row)
-        return fid
-
-    def row(self, analysis_id: uuid.UUID) -> dict[str, Any]:
-        return self.analyses[analysis_id]
-
-    def _info(self, analysis_id: uuid.UUID) -> AnalysisInfo:
-        a = self.analyses[analysis_id]
-        return AnalysisInfo(
-            id=analysis_id,
-            repository_id=a["repository_id"],
-            url=a["url"],
-            host=a["host"],
-            owner=a["owner"],
-            name=a["name"],
-            commit_sha=a["commit_sha"],
-            model_version=a["model_version"],
-            budget_hours=a["budget_hours"],
-            status=a["status"],
-            stage=a["stage"],
-            progress=a["progress"],
-        )
-
-    def _transition(self, analysis_id: uuid.UUID, allowed: tuple[str, ...], **values: Any) -> bool:
-        a = self.analyses.get(analysis_id)
-        if a is None or a["status"] not in allowed:
-            return False
-        a.update(values)
-        return True
-
-    # ----- Store protocol
-
-    def load_analysis(self, analysis_id: uuid.UUID) -> AnalysisInfo | None:
-        return self._info(analysis_id) if analysis_id in self.analyses else None
-
-    def set_running(self, analysis_id: uuid.UUID) -> bool:
-        return self._transition(analysis_id, ("queued", "running"), status="running", error=None)
-
-    def set_progress(self, analysis_id: uuid.UUID, stage: str, pct: int) -> bool:
-        ok = self._transition(analysis_id, ("queued", "running"), stage=stage, progress=pct)
-        if ok:
-            self.progress_log.append((analysis_id, stage, pct))
-        return ok
-
-    def set_failed(self, analysis_id: uuid.UUID, error: str) -> bool:
-        return self._transition(analysis_id, ("queued", "running"), status="failed", error=error)
-
-    def save_results(self, analysis_id: uuid.UUID, payload: ResultPayload) -> bool:
-        if self.analyses.get(analysis_id, {}).get("status") != "running":
-            return False
-        self.files[analysis_id] = list(payload.rows)
-        for row in payload.rows:
-            self.file_rows[self._next_file_id] = (analysis_id, row)
-            self._next_file_id += 1
-        self.artifacts[(analysis_id, "graph")] = payload.graph
-        self.artifacts[(analysis_id, "treemap")] = payload.treemap
-        self.plans[(analysis_id, payload.budget_hours)] = payload.plan
-        return self._transition(
-            analysis_id,
-            ("running",),
-            status="succeeded",
-            stage="done",
-            progress=100,
-            summary=payload.summary,
-            stats=payload.stats,
-        )
-
-    def load_file(self, file_result_id: int) -> FileInfo | None:
-        found = self.file_rows.get(file_result_id)
-        if found is None:
-            return None
-        aid, row = found
-        from tdp_core.serialize import from_jsonable
-
-        return FileInfo(
-            id=file_result_id,
-            analysis=self._info(aid),
-            path=row.path,
-            blob_sha=row.blob_sha,
-            score=score_from_row(row),
-            extra=from_jsonable(FileExtra, row.extra),
-        )
-
-    def begin_advice(self, cache_key: str, *, file_result_id: int, model: str) -> str:
-        row = self.advice.get(cache_key)
-        if row is None:
-            row = AdviceRow(file_result_id=file_result_id, model=model, status="queued")
-            self.advice[cache_key] = row
-        return row.status
-
-    def advice_ready(self, cache_key: str, body: Mapping[str, Any]) -> bool:
-        row = self.advice.get(cache_key)
-        if row is None or row.status != "queued":
-            return False
-        row.status, row.body, row.error = "ready", dict(body), None
-        return True
-
-    def advice_failed(self, cache_key: str, error: str) -> bool:
-        row = self.advice.get(cache_key)
-        if row is None or row.status != "queued":
-            return False
-        row.status, row.body, row.error = "failed", None, error
-        return True
-
-    def static_cache(self) -> StaticCache | None:
-        return self.cache
-
-    def close(self) -> None:
-        self.closed = True
-
-
 @pytest.fixture
 def store(worker_env: dict[str, Path]) -> Iterator[MemoryStore]:
     memory = MemoryStore()
@@ -421,29 +206,8 @@ def local_source(monkeypatch: pytest.MonkeyPatch, source_repo: SourceRepo) -> So
     return source_repo
 
 
-class EventLog:
-    """Collects the progress events of one analysis from a fakeredis subscription."""
-
-    def __init__(self, client: fakeredis.FakeRedis, analysis_id: uuid.UUID) -> None:
-        self._pubsub = client.pubsub(ignore_subscribe_messages=True)
-        self._pubsub.subscribe(progress.channel_for(analysis_id))
-        self._pubsub.get_message(timeout=0.1)  # the subscribe confirmation
-
-    def drain(self) -> list[ProgressEvent]:
-        events: list[ProgressEvent] = []
-        while True:
-            message = self._pubsub.get_message(timeout=0.1)
-            if message is None:
-                return events
-            if message.get("type") == "message":
-                events.append(ProgressEvent.from_json(message["data"]))
-
-
-EventsFactory = Callable[[uuid.UUID], EventLog]
-
-
 @pytest.fixture
-def events(fake_redis: fakeredis.FakeRedis) -> EventsFactory:
+def events(fake_redis: fakeredis.FakeRedis) -> Callable[[uuid.UUID], EventLog]:
     """``events(aid)`` subscribes to an analysis's channel; call ``.drain()`` after the run."""
 
     def make(analysis_id: uuid.UUID) -> EventLog:
@@ -487,7 +251,9 @@ def make_sample_result(priorities: Mapping[str, int] = SAMPLE_PRIORITIES) -> Ana
                 reasons=(_reason("cc_max", "S", f"Complex code in {path}"),) if priority >= 50 else (),
                 mitigations=(_reason("has_test_file", "T", "Has a test file"),) if i == 1 else (),
                 debt_types=debt_cycle[i % len(debt_cycle)],
-                shap_by_family={fam: round(0.1 * (k + 1) - i * 0.01, 4) for k, fam in enumerate(FAMILY_ORDER)},
+                shap_by_family={
+                    fam: round(0.1 * (k + 1) - i * 0.01, 4) for k, fam in enumerate(FAMILY_ORDER)
+                },
             )
         )
         hours = 4.0 - i * 0.5
@@ -512,7 +278,9 @@ def make_sample_result(priorities: Mapping[str, int] = SAMPLE_PRIORITIES) -> Ana
         for k, p in enumerate(paths)
         if p != "pkg/zero.py"
     )
-    edges = (GraphEdge(source="pkg/core.py", target="pkg/util.py", kind="import", weight=1.0),) if paths else ()
+    edges = (
+        (GraphEdge(source="pkg/core.py", target="pkg/util.py", kind="import", weight=1.0),) if paths else ()
+    )
     steps = (
         (
             PlanStep(
@@ -548,10 +316,15 @@ def make_sample_result(priorities: Mapping[str, int] = SAMPLE_PRIORITIES) -> Ana
     )
 
 
+MakeResult = Callable[[Mapping[str, int]], AnalysisResult]
+
+
+@pytest.fixture
+def make_result() -> MakeResult:
+    """``make_result(priorities)`` builds an ``AnalysisResult`` with those files and priorities."""
+    return make_sample_result
+
+
 @pytest.fixture
 def sample_result() -> AnalysisResult:
     return make_sample_result()
-
-
-def with_status(result: AnalysisResult, **changes: Any) -> AnalysisResult:
-    return replace(result, **changes)
