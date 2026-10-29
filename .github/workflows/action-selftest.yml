@@ -1,0 +1,72 @@
+name: action-selftest
+
+on:
+  pull_request:
+    paths:
+      - "action/**"
+      - ".github/workflows/action-selftest.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  security-events: write
+  actions: read
+
+concurrency:
+  group: action-selftest-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  selftest:
+    # Pull requests from forks only get a read-only token, so they cannot write the comment.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Run the action with SARIF
+        id: first
+        uses: ./action
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          sarif: entropiq.sarif
+
+      - name: Run the action again, which must update the same comment
+        id: second
+        uses: ./action
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+
+      - name: Check the comment, the model and the SARIF file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          FIRST_ID: ${{ steps.first.outputs.comment-id }}
+          SECOND_ID: ${{ steps.second.outputs.comment-id }}
+          SOURCE: ${{ steps.first.outputs.model-source }}
+          REPORT: ${{ steps.first.outputs.report-json }}
+        run: |
+          set -euo pipefail
+          test -s entropiq.sarif
+          test -s "$REPORT"
+          if [ "$SOURCE" != "release" ]; then
+            echo "::error::The action used the $SOURCE model, not the released one."
+            exit 1
+          fi
+          if [ -z "$FIRST_ID" ] || [ "$FIRST_ID" != "$SECOND_ID" ]; then
+            echo "::error::The second run did not update the first comment ($FIRST_ID, $SECOND_ID)."
+            exit 1
+          fi
+          count=$(gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" \
+            --jq '[.[] | select((.body // "") | startswith("<!-- tdp-report -->"))] | length' \
+            | awk '{n += $1} END {print n + 0}')
+          if [ "$count" != "1" ]; then
+            echo "::error::Expected one Entropiq comment on the pull request, found $count."
+            exit 1
+          fi
+          echo "One Entropiq comment ($FIRST_ID), model from the release, SARIF and JSON written."

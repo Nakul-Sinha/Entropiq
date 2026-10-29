@@ -1,0 +1,163 @@
+name: Entropiq pull request report
+description: >-
+  Rank the files a pull request changes by the maintenance pain they are likely to cause and keep one
+  comment with the result.
+author: Nakul-Sinha
+branding:
+  icon: bar-chart-2
+  color: purple
+
+inputs:
+  base:
+    description: >-
+      Branch, tag or commit to compare with. The report covers the files changed in BASE...HEAD. On pull
+      requests pass the base sha of the pull request (github.event.pull_request.base.sha).
+    required: true
+  comment:
+    description: Post or update one pull request comment with the report (true or false).
+    required: false
+    default: "true"
+  sarif:
+    description: Path of a SARIF file to write and upload to code scanning. Empty skips SARIF.
+    required: false
+    default: ""
+  fail-on:
+    description: Fail the job when a changed file is in this band or above (none, high or critical).
+    required: false
+    default: none
+  model-version:
+    description: >-
+      Model release to use, for example ranker-2026.10.1. Empty uses models/production.json at the
+      action ref.
+    required: false
+    default: ""
+  github-token:
+    description: Token that downloads the model release and writes the comment.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  model-source:
+    description: release when the published model was used, dev when the action fell back to the demo model.
+    value: ${{ steps.fetch.outputs.source }}
+  model-version:
+    description: Version of the model that ranked the files.
+    value: ${{ steps.report.outputs.model-version }}
+  highest-band:
+    description: Highest band among the changed files (Critical, High, Medium, Low or none).
+    value: ${{ steps.report.outputs.highest-band }}
+  comment-id:
+    description: Id of the pull request comment, empty when no comment was written.
+    value: ${{ steps.report.outputs.comment-id }}
+  report-json:
+    description: Path of the tdp diff JSON report on the runner.
+    value: ${{ steps.analyze.outputs.report-json }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check the runner
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        echo "::error::The Entropiq action runs on Linux and macOS runners."
+        exit 1
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: false
+
+    - name: Install the Entropiq CLI
+      shell: bash
+      working-directory: ${{ github.action_path }}/..
+      env:
+        UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/entropiq/venv
+      run: uv sync --frozen --no-dev --no-editable --package tdp-cli --python 3.12
+
+    - name: Check the inputs and choose the model
+      id: resolve
+      shell: bash
+      env:
+        ENTROPIQ_WORK_DIR: ${{ runner.temp }}/entropiq
+        ENTROPIQ_POINTER: ${{ github.action_path }}/../models/production.json
+        ENTROPIQ_DEFAULT_REPO: ${{ github.action_repository || github.repository }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_SARIF: ${{ inputs.sarif }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_MODEL_VERSION: ${{ inputs.model-version }}
+      run: |
+        "$RUNNER_TEMP/entropiq/venv/bin/python" "$GITHUB_ACTION_PATH/run.py" resolve
+
+    - name: Restore the model cache
+      id: cache
+      if: steps.resolve.outputs.cache-key != ''
+      continue-on-error: true
+      uses: actions/cache/restore@v5
+      with:
+        path: ${{ steps.resolve.outputs.cache-dir }}
+        key: ${{ steps.resolve.outputs.cache-key }}
+
+    - name: Download and verify the model
+      id: fetch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        ENTROPIQ_WORK_DIR: ${{ runner.temp }}/entropiq
+        ENTROPIQ_POINTER: ${{ github.action_path }}/../models/production.json
+        ENTROPIQ_DEFAULT_REPO: ${{ github.action_repository || github.repository }}
+        INPUT_MODEL_VERSION: ${{ inputs.model-version }}
+      run: |
+        "$RUNNER_TEMP/entropiq/venv/bin/python" "$GITHUB_ACTION_PATH/run.py" fetch
+
+    - name: Save the model cache
+      if: steps.resolve.outputs.cache-key != '' && steps.fetch.outputs.downloaded == 'true'
+      continue-on-error: true
+      uses: actions/cache/save@v5
+      with:
+        path: ${{ steps.resolve.outputs.cache-dir }}
+        key: ${{ steps.resolve.outputs.cache-key }}
+
+    - name: Rank the changed files
+      id: analyze
+      shell: bash
+      env:
+        ENTROPIQ_HOME: ${{ runner.temp }}/entropiq/home
+        TDP: ${{ runner.temp }}/entropiq/venv/bin/tdp
+        REPORT_JSON: ${{ runner.temp }}/entropiq/diff.json
+        BASE: ${{ inputs.base }}
+        SARIF: ${{ inputs.sarif }}
+        MODEL_DIR: ${{ steps.fetch.outputs.model-dir }}
+      run: |
+        set -euo pipefail
+        if [ "$(git rev-parse --is-shallow-repository 2>/dev/null || echo false)" = "true" ]; then
+          echo "::warning::The checkout is shallow. Use actions/checkout with fetch-depth: 0 so Entropiq sees the history and the base commit."
+        fi
+        if [ -n "$MODEL_DIR" ]; then model=(--model-dir "$MODEL_DIR"); else model=(--dev-model); fi
+        "$TDP" diff . "--base=$BASE" --format json "${model[@]}" > "$REPORT_JSON"
+        echo "report-json=$REPORT_JSON" >> "$GITHUB_OUTPUT"
+        if [ -n "$SARIF" ]; then
+          "$TDP" report . --format sarif "--output=$SARIF" "${model[@]}"
+        fi
+
+    - name: Upload SARIF to code scanning
+      if: inputs.sarif != ''
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ inputs.sarif }}
+        category: entropiq
+        token: ${{ inputs.github-token }}
+
+    - name: Comment and apply fail-on
+      id: report
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        ENTROPIQ_DIFF_JSON: ${{ runner.temp }}/entropiq/diff.json
+        ENTROPIQ_MODEL_REASON: ${{ steps.fetch.outputs.reason }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        "$RUNNER_TEMP/entropiq/venv/bin/python" "$GITHUB_ACTION_PATH/run.py" report
