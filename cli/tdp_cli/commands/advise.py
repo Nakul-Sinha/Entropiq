@@ -1,12 +1,15 @@
 """``/advise`` and ``tdp advise``: grounded AI fix advice for one file through ``tdp_core.advisor``.
 
-The advice comes from Anthropic's API (``DEFAULT_SETTINGS.advisor_model``) when ``ANTHROPIC_API_KEY`` is set.
-The advisor checks every suggested step against the functions of the file and drops steps that name code that
-is not there. Answers are cached under ``<Entropiq home>/advice/<key>.json`` with the platform's key
-(``Advisor.cache_key(blob_sha, model)``), so the same file content and model never cost a second request
-unless ``--refresh`` is given. Saved advice is shown even when no key is set.
+The advice comes from Claude (``DEFAULT_SETTINGS.advisor_model``) through one of two backends, chosen by
+:func:`choose_backend`: Anthropic's API when ``ANTHROPIC_API_KEY`` is set, otherwise the Claude Code CLI
+(``claude``) with the person's own login, so no key is needed. ``ENTROPIQ_ADVISOR`` (``auto``, ``api`` or
+``claude-cli``) forces one. The advisor checks every suggested step against the functions of the file and
+drops steps that name code that is not there. Answers are cached under ``<Entropiq home>/advice/<key>.json``
+with the platform's key (``Advisor.cache_key(blob_sha, model)``), so the same file content and model never
+cost a second request unless ``--refresh`` is given. Saved advice is shown even when no backend is available.
 
-Tests replace :data:`client_factory` so no real client is ever built.
+Tests replace :data:`client_factory`, :data:`cli_client_factory` and :data:`claude_cli` so no real client is
+ever built.
 """
 
 from __future__ import annotations
@@ -59,9 +62,12 @@ logger = logging.getLogger(__name__)
 ADVICE_SCHEMA: Final = "entropiq.advice.v1"
 CACHE_SCHEMA: Final = 1
 ENV_API_KEY: Final = "ANTHROPIC_API_KEY"
+ENV_BACKEND: Final = "ENTROPIQ_ADVISOR"
+BACKENDS: Final = ("auto", "api", "claude-cli")
 ADVICE_DIR: Final = "advice"
 RETRY_HINT: Final = "The service may be busy or unreachable; try again in a minute."
 INSTALL_HINT: Final = "Install the advisor extra: pip install 'tdp-core[advisor]'"
+LOGIN_HINT: Final = "Run claude once in a terminal and log in, then try again."
 NO_PATH: Final = "say which file to get advice for, for example /advise pkg/mod.py"
 NO_STEPS: Final = "No concrete steps were suggested."
 ALL_DROPPED: Final = "Every suggested step named code that is not in this file, so none is shown."
@@ -94,12 +100,72 @@ def anthropic_client(model: str, api_key: str) -> LLMClient:
 client_factory: ClientFactory = anthropic_client
 """The factory the commands use, looked up at call time (tests replace it with a fake)."""
 
+type CliClientFactory = Callable[[str, Sequence[str]], LLMClient]
+"""Builds the Claude CLI client from ``(model, command)``."""
+
+
+def claude_cli_client(model: str, command: Sequence[str]) -> LLMClient:
+    """The real client that runs the Claude Code CLI with the person's own login."""
+    from tdp_core.advisor.client import ClaudeCLIClient
+
+    return ClaudeCLIClient(model, command)
+
+
+cli_client_factory: CliClientFactory = claude_cli_client
+"""The Claude CLI factory the commands use, looked up at call time (tests replace it with a fake)."""
+
+
+def find_cli(environ: Mapping[str, str] | None = None) -> list[str] | None:
+    """The command that starts the installed Claude Code CLI, or None (see ``find_claude_cli``)."""
+    from tdp_core.advisor.client import find_claude_cli
+
+    return find_claude_cli(environ)
+
+
+claude_cli: Callable[[Mapping[str, str] | None], list[str] | None] = find_cli
+"""How the commands find the Claude CLI, looked up at call time (tests replace it)."""
+
+
+@dataclass(frozen=True, slots=True)
+class Backend:
+    """Where fresh advice comes from: the API with ``key``, or the Claude CLI started by ``command``."""
+
+    kind: Literal["api", "claude-cli"]
+    key: str = ""
+    command: tuple[str, ...] = ()
+
+    @property
+    def label(self) -> str:
+        """How the spinner names it: ``"the Anthropic API"`` or ``"the Claude CLI"``."""
+        return "the Anthropic API" if self.kind == "api" else "the Claude CLI"
+
 
 def api_key(environ: Mapping[str, str] | None = None) -> str | None:
     """The stripped ``ANTHROPIC_API_KEY`` of ``environ`` (default ``os.environ``), None when blank."""
     env = os.environ if environ is None else environ
     key = env.get(ENV_API_KEY, "").strip()
     return key or None
+
+
+def choose_backend(environ: Mapping[str, str] | None = None) -> Backend | None:
+    """The backend for fresh advice, or None when none is available.
+
+    ``ENTROPIQ_ADVISOR`` picks one: ``api`` needs ``ANTHROPIC_API_KEY``, ``claude-cli`` needs the ``claude``
+    command, and ``auto`` (the default) prefers a set key and falls back to the Claude CLI. Raises
+    :class:`UsageError` for any other value.
+    """
+    env = os.environ if environ is None else environ
+    wanted = env.get(ENV_BACKEND, "").strip().lower() or "auto"
+    if wanted not in BACKENDS:
+        raise UsageError(f"{ENV_BACKEND} must be one of {', '.join(BACKENDS)}, not {clean(wanted)!r}")
+    key = api_key(env)
+    if wanted != "claude-cli" and key is not None:
+        return Backend("api", key=key)
+    if wanted != "api":
+        command = claude_cli(env)
+        if command:
+            return Backend("claude-cli", command=tuple(command))
+    return None
 
 
 def advice_dir(home: EntropiqHome) -> Path:
@@ -200,30 +266,38 @@ def request_advice(
     score: FileScore,
     extra: FileExtra,
     model: str,
-    key: str,
+    backend: Backend,
 ) -> AdviceEntry:
-    """Ask the model for advice on one file (with a spinner) and return it as a fresh entry.
+    """Ask the model for advice on one file through ``backend`` (with a spinner) and return a fresh entry.
 
     Raises :class:`CliError` when the client cannot be built, the request fails (with a retry hint when it is
-    worth trying again) or no valid advice came back. Ctrl+C propagates.
+    worth trying again, or a login hint when the Claude CLI is not logged in) or no valid advice came back.
+    Ctrl+C propagates.
     """
     from tdp_core.advisor.advisor import Advisor
     from tdp_core.advisor.client import LLMError
     from tdp_core.advisor.schema import AdviceError
 
     try:
-        client = client_factory(model, key)
+        if backend.kind == "api":
+            client = client_factory(model, backend.key)
+        else:
+            client = cli_client_factory(model, backend.command)
     except LLMError as exc:
         message = str(exc)
         hint = INSTALL_HINT if "not installed" in message else None
         raise CliError(f"AI advice is unavailable: {clean(message)}", hint=hint) from exc
+    via = " (through the Claude CLI)" if backend.kind == "claude-cli" else ""
     try:
-        with activity(session.err_console, f"Asking {model} for fix advice on {clean(path)}"):
+        with activity(session.err_console, f"Asking {model} for fix advice on {clean(path)}{via}"):
             advice = Advisor(client).advise(path=path, source=source, syntax=syntax, score=score, extra=extra)
     except LLMError as exc:
-        raise CliError(
-            f"The advice request failed: {clean(str(exc))}", hint=RETRY_HINT if exc.retryable else None
-        ) from exc
+        message = str(exc)
+        if backend.kind == "claude-cli" and "login" in message.lower():
+            failure_hint: str | None = LOGIN_HINT
+        else:
+            failure_hint = RETRY_HINT if exc.retryable else None
+        raise CliError(f"The advice request failed: {clean(message)}", hint=failure_hint) from exc
     except AdviceError as exc:
         raise CliError(f"No usable advice for {clean(path)}: {clean(str(exc))}") from exc
     finally:
@@ -241,9 +315,10 @@ def get_advice(
     refresh: bool = False,
     environ: Mapping[str, str] | None = None,
 ) -> AdviceEntry | None:
-    """Saved advice for ``score.path`` (unless ``refresh``), else fresh advice; None when no key is set.
+    """Saved advice for ``score.path`` (unless ``refresh``), else fresh advice; None without a backend.
 
-    Saved advice is looked up before the key, so it shows without a key. Fresh advice is saved for next time.
+    Saved advice is looked up before the backend, so it shows without one. Fresh advice is saved for next
+    time.
     """
     extra = loaded.result.extras.get(score.path)
     if extra is None:
@@ -254,12 +329,19 @@ def get_advice(
         hit = read_cached(file)
         if hit is not None:
             return hit
-    key = api_key(environ)
-    if key is None:
+    backend = choose_backend(environ)
+    if backend is None:
         return None
     source, syntax = read_source(loaded, score.path, extra.blob_sha)
     entry = request_advice(
-        session, path=score.path, source=source, syntax=syntax, score=score, extra=extra, model=model, key=key
+        session,
+        path=score.path,
+        source=source,
+        syntax=syntax,
+        score=score,
+        extra=extra,
+        model=model,
+        backend=backend,
     )
     save_cached(file, entry, file_path=score.path, blob_sha=extra.blob_sha)
     return entry
@@ -307,15 +389,18 @@ def advice_view(path: str, entry: AdviceEntry, *, glyphs: Glyphs = UNICODE_GLYPH
 
 
 def disabled_view(model: str, *, command: str = "/advise") -> Panel:
-    """The panel shown when no API key is set: what the feature does, how to turn it on, and what is sent."""
+    """The panel shown when no backend is available: what the feature does, the two ways to turn it on, and
+    what is sent."""
     lines = [
         f"Entropiq can ask Claude ({model}) for a short, step-by-step fix plan for one file.",
-        f"To turn it on, set {ENV_API_KEY} to an Anthropic API key, then run {command} again:",
-        f'  PowerShell   $env:{ENV_API_KEY} = "<your key>"',
-        f"  bash or zsh  export {ENV_API_KEY}=<your key>",
+        f"Turn it on in one of two ways, then run {command} again:",
+        "  Claude CLI   install Claude Code and log in once (run claude); Entropiq then uses that login,",
+        "               so no key is needed",
+        f'  API key      PowerShell   $env:{ENV_API_KEY} = "<your key>"',
+        f"               bash or zsh  export {ENV_API_KEY}=<your key>",
+        f"With both available the key is used; set {ENV_BACKEND}=claude-cli to use the Claude CLI instead.",
         "The request sends the file's scores, reasons and up to "
         f"{DEFAULT_SETTINGS.advisor_max_excerpt_lines} lines of its code to Anthropic.",
-        "Create a key at https://console.anthropic.com/settings/keys",
     ]
     return make_panel(Group(*(Text(line) for line in lines)), Text("AI fix advice is off"))
 
@@ -372,7 +457,7 @@ def advise_cli(
     model_dir: ModelDirOption = None,
     dev_model: DevModelOption = False,
 ) -> None:
-    """Get AI fix advice for one file (needs ANTHROPIC_API_KEY)."""
+    """Get AI fix advice for one file (uses your Claude CLI login or ANTHROPIC_API_KEY)."""
     session = cli_session(ctx, model_dir=model_dir, dev_model=dev_model)
     loaded = cli_analysis(session, target, ref=ref, fresh=fresh)
     with cli_guard(session.err_console):
@@ -396,15 +481,18 @@ def register(registry: CommandRegistry) -> None:
             name="advise",
             aliases=("advice",),
             group="Plan",
-            help="Get AI fix advice for one file (needs ANTHROPIC_API_KEY)",
+            help="Get AI fix advice for one file (uses your Claude CLI login or ANTHROPIC_API_KEY)",
             usage=USAGE,
             details=(
                 "Name the file by its path, a unique ending of it or its rank. Asks Claude "
                 f"({DEFAULT_SETTINGS.advisor_model}) for a short fix plan and keeps only the steps that name "
-                "functions of that file. Answers are saved in the advice folder of the Entropiq home and "
-                "shown again for the same file content; --refresh asks again. The request sends the file's "
-                f"scores, reasons and up to {DEFAULT_SETTINGS.advisor_max_excerpt_lines} lines of its code "
-                "to Anthropic. Without ANTHROPIC_API_KEY the command explains how to turn it on."
+                "functions of that file. With ANTHROPIC_API_KEY set the request goes to the Anthropic API; "
+                "otherwise it goes through the Claude Code CLI (claude) with your own login, so no key is "
+                f"needed. {ENV_BACKEND}=api or claude-cli picks one. Answers are saved in the advice folder "
+                "of the Entropiq home and shown again for the same file content; --refresh asks again. The "
+                "request sends the file's scores, reasons and up to "
+                f"{DEFAULT_SETTINGS.advisor_max_excerpt_lines} lines of its code to Anthropic. With neither "
+                "available the command explains how to turn it on."
             ),
             handler=advise_handler,
             complete=_complete,

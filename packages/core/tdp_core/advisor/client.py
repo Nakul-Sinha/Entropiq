@@ -11,16 +11,25 @@ Rules:
   configuration or an assistant prefill: current models reject non-default sampling and prefill, and
   adaptive thinking is their default. Its key is the ``api_key`` argument or ``ANTHROPIC_API_KEY``, passed
   explicitly so the SDK never falls back to a personal login, a profile or federation.
+- ``ClaudeCLIClient`` runs the Claude Code CLI (``claude -p``) instead, so the request uses the person's own
+  Claude login and needs no API key. It turns off every tool, MCP server, setting file, slash command and
+  saved session, runs in an empty temporary folder, and never passes ``ANTHROPIC_API_KEY`` on, so the CLI
+  answers the one prompt with the login and nothing else.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import shutil
+import subprocess
+import tempfile
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, Protocol
+from pathlib import Path
+from typing import TYPE_CHECKING, Final, Literal, Protocol
 
 from tdp_core.advisor.schema import AdviceError
 
@@ -29,12 +38,15 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ANTHROPIC_FALLBACK_BETA",
+    "ENV_CLAUDE_CLI",
     "AnthropicClient",
+    "ClaudeCLIClient",
     "Effort",
     "FakeLLMClient",
     "LLMCall",
     "LLMClient",
     "LLMError",
+    "find_claude_cli",
 ]
 
 logger = logging.getLogger(__name__)
@@ -203,3 +215,161 @@ class AnthropicClient:
     def close(self) -> None:
         """Close the SDK client's HTTP connections."""
         self._sdk.close()
+
+
+ENV_CLAUDE_CLI: Final = "ENTROPIQ_CLAUDE_CLI"
+"""Environment variable naming the Claude CLI executable, for when ``claude`` is not on ``PATH``."""
+
+_NPM_NATIVE: Final = ("node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe")
+_RETRYABLE_WORDS: Final = (
+    "rate limit",
+    "rate_limit",
+    "overloaded",
+    "too many requests",
+    "timed out",
+    "timeout",
+    "connection",
+    "network",
+    "temporarily",
+    "529",
+    "503",
+    "502",
+    "500",
+)
+_TAIL_CHARS: Final = 400
+
+
+def find_claude_cli(environ: Mapping[str, str] | None = None) -> list[str] | None:
+    """The command that starts the Claude Code CLI, or ``None`` when it is not installed.
+
+    ``ENTROPIQ_CLAUDE_CLI`` wins when it names an existing file. Otherwise ``claude`` is looked up on the
+    ``PATH`` of ``environ`` (default ``os.environ``). On Windows the npm shim ``claude.cmd`` is replaced by
+    the ``claude.exe`` it starts, so the arguments never pass through ``cmd.exe`` and its quoting rules.
+    """
+    env = os.environ if environ is None else environ
+    explicit = env.get(ENV_CLAUDE_CLI, "").strip()
+    if explicit:
+        return [explicit] if Path(explicit).is_file() else None
+    found = shutil.which("claude", path=env.get("PATH"))
+    if found is None:
+        return None
+    path = Path(found)
+    if path.suffix.lower() in {".cmd", ".bat"}:
+        native = path.parent.joinpath(*_NPM_NATIVE)
+        if native.is_file():
+            return [str(native)]
+    return [str(path)]
+
+
+def _tail(text: str) -> str:
+    flat = " ".join(text.split())
+    return flat if len(flat) <= _TAIL_CHARS else "..." + flat[-_TAIL_CHARS:]
+
+
+def _looks_retryable(text: str) -> bool:
+    lowered = text.lower()
+    return any(word in lowered for word in _RETRYABLE_WORDS)
+
+
+class ClaudeCLIClient:
+    """An ``LLMClient`` that asks the Claude Code CLI (``claude -p``), using the person's own Claude login.
+
+    Every call starts ``command`` in print mode with JSON output and ``model``, the system prompt in a file
+    and the user message on standard input. Tools, MCP servers, setting files, slash commands and session
+    saving are all turned off, the process runs in an empty temporary folder, and ``ANTHROPIC_API_KEY`` is
+    removed from its environment so the login, not a key, pays for the request. ``max_tokens`` becomes
+    ``CLAUDE_CODE_MAX_OUTPUT_TOKENS`` unless that is already set. Each call may take ``timeout_s`` seconds.
+    """
+
+    def __init__(self, model: str, command: Sequence[str], *, timeout_s: float = 300.0) -> None:
+        """Use ``command`` (for example the result of ``find_claude_cli()``) for ``model``.
+
+        Raises ``ValueError`` when ``model`` or ``command`` is empty or ``timeout_s`` is not positive.
+        """
+        if not model.strip():
+            raise ValueError("model must not be empty")
+        if not command:
+            raise ValueError("command must not be empty")
+        if timeout_s <= 0:
+            raise ValueError(f"timeout_s must be positive, got {timeout_s}")
+        self.model = model
+        self._command = [str(part) for part in command]
+        self._timeout_s = timeout_s
+
+    def argv(self, system_prompt_file: Path) -> list[str]:
+        """The full command line of one call, with the system prompt read from ``system_prompt_file``."""
+        return [
+            *self._command,
+            "-p",
+            "--output-format",
+            "json",
+            "--model",
+            self.model,
+            "--system-prompt-file",
+            str(system_prompt_file),
+            "--tools",
+            "",
+            "--strict-mcp-config",
+            "--setting-sources",
+            "",
+            "--disable-slash-commands",
+            "--no-session-persistence",
+        ]
+
+    def complete(self, system: str, user: str, *, max_tokens: int) -> str:
+        """The CLI's text reply (may be ``""``).
+
+        Raises ``LLMError``: retryable for timeouts and for errors that read like rate limits, overload or
+        connection problems; not retryable when the CLI cannot start, is not logged in, or fails otherwise.
+        """
+        env = {name: value for name, value in os.environ.items() if name.upper() != "ANTHROPIC_API_KEY"}
+        env.setdefault("CLAUDE_CODE_MAX_OUTPUT_TOKENS", str(max_tokens))
+        with tempfile.TemporaryDirectory(prefix="entropiq-advice-") as folder:
+            prompt_file = Path(folder) / "system-prompt.txt"
+            prompt_file.write_text(system, encoding="utf-8")
+            try:
+                done = subprocess.run(
+                    self.argv(prompt_file),
+                    input=user,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    cwd=folder,
+                    env=env,
+                    timeout=self._timeout_s,
+                    check=False,
+                )
+            except FileNotFoundError as exc:
+                raise LLMError(f"the Claude CLI was not found at {self._command[0]}") from exc
+            except subprocess.TimeoutExpired as exc:
+                raise LLMError(
+                    f"the Claude CLI did not answer within {self._timeout_s:.0f} s", retryable=True
+                ) from exc
+            except OSError as exc:
+                raise LLMError(f"could not start the Claude CLI: {exc}") from exc
+        return _cli_reply(done.returncode, done.stdout, done.stderr)
+
+
+def _cli_reply(code: int, stdout: str, stderr: str) -> str:
+    """The ``result`` text of one ``claude -p --output-format json`` run; raises ``LLMError`` on failure."""
+    data: object = None
+    text = stdout.strip()
+    if text:
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            data = None
+    if isinstance(data, dict):
+        result = data.get("result")
+        failed = bool(data.get("is_error")) or data.get("subtype", "success") != "success" or code != 0
+        if failed:
+            detail = str(result or data.get("subtype") or stderr.strip() or f"exit code {code}")
+            raise LLMError(
+                f"the Claude CLI reported an error: {_tail(detail)}", retryable=_looks_retryable(detail)
+            )
+        return result if isinstance(result, str) else ""
+    detail = stderr.strip() or text or "no output"
+    raise LLMError(
+        f"the Claude CLI failed (exit code {code}): {_tail(detail)}", retryable=_looks_retryable(detail)
+    )

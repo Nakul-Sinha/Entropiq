@@ -50,10 +50,18 @@ def _refuse(model: str, key: str) -> Any:
     raise AssertionError("a test tried to build a real LLM client")
 
 
+def _refuse_cli(model: str, command: Any) -> Any:
+    raise AssertionError("a test tried to build a real Claude CLI client")
+
+
 @pytest.fixture(autouse=True)
 def no_real_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test here may reach a real model: no key, no Claude CLI, and both factories refuse."""
     monkeypatch.delenv(advise.ENV_API_KEY, raising=False)
+    monkeypatch.delenv(advise.ENV_BACKEND, raising=False)
     monkeypatch.setattr(advise, "client_factory", _refuse)
+    monkeypatch.setattr(advise, "cli_client_factory", _refuse_cli)
+    monkeypatch.setattr(advise, "claude_cli", lambda environ=None: None)
 
 
 @pytest.fixture

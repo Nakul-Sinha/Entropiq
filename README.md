@@ -36,8 +36,21 @@ uv tool install ./cli --with anthropic
 ```
 
 If uv says its tool folder is not on your `PATH`, run `uv tool update-shell` once and open a new terminal. After
-pulling new code, run `uv tool install --reinstall ./cli --with anthropic`. (`--with anthropic` adds the client that
-`/advise` uses.)
+pulling new code, run `uv tool install --reinstall ./cli --with anthropic`. (`--with anthropic` adds the API client
+that `/advise` uses when `ANTHROPIC_API_KEY` is set.)
+
+### AI advice
+
+`/advise` asks Claude for a short fix plan for one file. It needs no API key if Claude Code is installed: with
+`ANTHROPIC_API_KEY` unset, Entropiq runs your `claude` command in headless mode and the request uses your own Claude
+login (run `claude` once and log in first). Each request runs with no tools, MCP servers, setting files or saved
+session, in an empty temporary folder, and takes about 15 to 60 seconds. With `ANTHROPIC_API_KEY` set the request
+goes to the Anthropic API instead. `ENTROPIQ_ADVISOR=claude-cli` (or `api`) picks one when both are available, and
+`ENTROPIQ_CLAUDE_CLI` names the `claude` executable if it is not on your `PATH`.
+
+Install or reinstall the global command from an ordinary terminal, not from inside the Claude desktop app. The
+desktop app is a packaged Windows app and can redirect files that its programs write under `AppData` into a
+private folder that other terminals cannot see.
 
 An installed command lives outside the checkout, so give it the production model once: copy
 `models/production.json` and the bundle folder it names into the Entropiq home folder.
@@ -96,7 +109,7 @@ compare them over time.
 | Explore | `/graph [file]` | | Show central files, import cycles and hidden couplings, or one file's dependencies |
 | Explore | `/tree [folder] [--files]` | | Show the folder tree with lines of code and the highest band |
 | Explore | `/whatif <file> [--all]` | `/what-if` | Simulate fixes on one file and compare its priority and risk |
-| Plan | `/advise <file>` | `/advice` | Get AI fix advice for one file (needs `ANTHROPIC_API_KEY`) |
+| Plan | `/advise <file>` | `/advice` | Get AI fix advice for one file (your Claude CLI login or `ANTHROPIC_API_KEY`) |
 | Plan | `/plan [--budget HOURS]` | | Show the fix plan that fits a time budget |
 | Report | `/diff --base REF` | | Rank the files changed since a base commit |
 | Report | `/export md\|json\|sarif [-o FILE]` | `/report` | Write the analysis to a Markdown, JSON or SARIF file |
@@ -124,7 +137,7 @@ The commands that read a repository take an optional path or GitHub URL (default
 | `entropiq graph [PATH]` | Show central files, import cycles and hidden couplings, or one file's dependencies |
 | `entropiq tree [PATH]` | Show the folder tree with lines of code and the highest band |
 | `entropiq whatif FILE [PATH]` | Simulate fixes on one file (`--add-tests`, `--split`, `--dedupe`, `--resolve-satd`, `--break-cycle`, `--all`) |
-| `entropiq advise FILE [PATH]` | Get AI fix advice for one file (needs `ANTHROPIC_API_KEY`) |
+| `entropiq advise FILE [PATH]` | Get AI fix advice for one file (your Claude CLI login or `ANTHROPIC_API_KEY`) |
 | `entropiq plan [PATH]` | Show the fix plan that fits a time budget (`--budget HOURS`) |
 | `entropiq diff [PATH] --base REF` | Rank the files changed since a base commit |
 | `entropiq report [PATH]` | Write the analysis to a Markdown, JSON or SARIF file (`--format`, `-o FILE`) |
@@ -214,8 +227,8 @@ minute in rehearsal) while Python compiles and Windows Defender scans the new fi
 - Rename detection differs between git versions, so a rebuilt feature can differ slightly on another machine.
 - The model bundle is a release asset of this private repository, so the action in another repository needs
   read access to its releases, or it falls back to the demo model and says so.
-- AI advice needs `ANTHROPIC_API_KEY` and sends the file's scores, reasons and up to 300 lines of its code to
-  Anthropic.
+- AI advice needs a logged-in Claude CLI or `ANTHROPIC_API_KEY`, and either way sends the file's scores, reasons
+  and up to 300 lines of its code to Anthropic.
 
 ## After V1
 
