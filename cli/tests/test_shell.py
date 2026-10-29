@@ -56,7 +56,7 @@ def test_complete_command_names(session: Session) -> None:
 
 
 def test_complete_arguments(session: Session, sample_loaded: LoadedAnalysis) -> None:
-    assert [t for t, _, _ in _complete(session, "/help a")] == ["analyze"]
+    assert [t for t, _, _ in _complete(session, "/help an")] == ["analyze"]
     assert [t for t, _, _ in _complete(session, "/settings ")][:3] == ["budget_hours", "top", "jobs"]
     assert [t for t, _, _ in _complete(session, "/analyze --f")] == ["--fresh"]
     session.store.save(sample_loaded)
