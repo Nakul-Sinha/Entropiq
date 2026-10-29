@@ -1,0 +1,8 @@
+# Pinned repositories that `tdp-ml golden` and `tdp-ml promote` score with a candidate model.
+# Each sha is the commit the training manifest recorded, so every machine with the training mirrors
+# ($TDP_DATA_DIR/mirrors/<slug>.git) has it. click and starlette are not in the training data (they failed
+# the dataset criteria); requests is.
+repos:
+  - {name: pallets/click, sha: 2247b35ea1c47c727d7a06e51fa280e12a863ff6}
+  - {name: Kludex/starlette, sha: 8aa828ceaff764a2e57932fb42fdf105a47c4c83}
+  - {name: psf/requests, sha: 3c7baaa05ab4aa49cc819ce3a819d260de19c157}
