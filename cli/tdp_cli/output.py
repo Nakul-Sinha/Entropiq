@@ -86,12 +86,12 @@ def files_table(
     """
     table = make_table(title)
     table.add_column("#", justify="right", style="dim", no_wrap=True)
-    table.add_column("File", no_wrap=True, overflow="fold")
+    table.add_column("File", overflow="fold")
     table.add_column("Band", no_wrap=True)
     table.add_column("Risk", justify="right", no_wrap=True)
     if extras is not None:
         table.add_column("Cost", justify="right", no_wrap=True)
-    table.add_column("Top reason", overflow="fold", min_width=20)
+    table.add_column("Top reason", overflow="fold")
     shown = files[:limit] if limit else files
     for rank, f in enumerate(shown, start=start):
         row: list[RenderableType] = [

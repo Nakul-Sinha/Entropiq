@@ -19,7 +19,7 @@ from rich.console import Console
 
 from tdp_cli import __version__
 from tdp_cli.options import DevModelOption, ModelDirOption, RootOptions, cli_guard
-from tdp_cli.registry import CommandRegistry, load_registry
+from tdp_cli.registry import CommandRegistry, group_rank, load_registry
 
 APP_HELP = (
     "Entropiq ranks the files of a Git repository by future maintenance pain. "
@@ -48,7 +48,7 @@ def build_app(registry: CommandRegistry | None = None) -> typer.Typer:
     app = typer.Typer(
         name="entropiq",
         help=APP_HELP,
-        add_completion=False,
+        add_completion=True,
         pretty_exceptions_enable=False,
         no_args_is_help=False,
         context_settings={"help_option_names": ["-h", "--help"]},
@@ -72,7 +72,8 @@ def build_app(registry: CommandRegistry | None = None) -> typer.Typer:
             raise typer.Exit(run_shell(model_dir=model_dir, dev_model=dev_model))
 
     commands = registry if registry is not None else load_registry()
-    for name, function, help_text, group in commands.cli_entries():
+    entries = sorted(commands.cli_entries(), key=lambda entry: (group_rank(entry[3]), entry[0]))
+    for name, function, help_text, group in entries:
         app.command(name, help=help_text, rich_help_panel=group)(function)
     return app
 

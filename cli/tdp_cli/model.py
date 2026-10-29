@@ -10,7 +10,9 @@ Resolution order (first match wins), done from JSON files only so startup never 
    ``uri`` when that is a local folder (absolute, relative to the repository root, or ``file://``), else from
    a folder named after the version under ``$TDP_MODELS_DIR``, ``<home>/models`` or ``<repo>/models``. A
    candidate counts only when its ``metadata.json`` has that version;
-6. otherwise the demo bundle, with the reason shown to the user.
+6. outside a checkout (an installed command), ``<home>/models/production.json``, read the same way with a
+   relative ``uri`` resolved against the home folder;
+7. otherwise the demo bundle, with the reason shown to the user.
 """
 
 from __future__ import annotations
@@ -39,6 +41,7 @@ type ModelSource = Literal["option", "env", "production", "dev"]
 ENV_MODEL_DIR: Final = "TDP_MODEL_DIR"
 ENV_MODELS_DIR: Final = "TDP_MODELS_DIR"
 PRODUCTION_FILE: Final = Path("models") / "production.json"
+HOME_POINTER: Final = "production.json"
 _METADATA: Final = "metadata.json"
 _FEATURE_SCHEMA: Final = "feature_schema.json"
 _BUNDLE_FILES: Final = frozenset(
@@ -145,28 +148,38 @@ def _uri_path(uri: str, repo_root: Path) -> Path | None:
     return candidate if candidate.is_dir() else None
 
 
+def installed_pointer(home: EntropiqHome) -> Path:
+    """The production pointer an installed command reads: ``<home>/models/production.json``.
+
+    An installed command lives outside any checkout, so it reads this copy of ``models/production.json``; a
+    relative ``uri`` in it resolves against the home folder.
+    """
+    return home.models / HOME_POINTER
+
+
 def _production(
-    repo_root: Path, home: EntropiqHome, environ: Mapping[str, str]
+    pointer: Path, base: Path, home: EntropiqHome, environ: Mapping[str, str], *, label: str
 ) -> tuple[ModelChoice | None, str]:
+    """The bundle named by the production ``pointer`` (relative uris resolve against ``base``)."""
     try:
-        data = _read_json(repo_root / PRODUCTION_FILE)
+        data = _read_json(pointer)
         if not isinstance(data, dict):
             raise ValueError("not an object")
     except (OSError, ValueError):
-        return None, "models/production.json is unreadable"
+        return None, f"{label} is unreadable"
     version = data.get("version")
     if not isinstance(version, str) or not version:
         return None, "no production model has been published yet"
     candidates: list[Path] = []
     uri = data.get("uri")
     if isinstance(uri, str):
-        local = _uri_path(uri, repo_root)
+        local = _uri_path(uri, base)
         if local is not None:
             candidates.append(local)
     models_dir = environ.get(ENV_MODELS_DIR, "").strip()
     if models_dir:
         candidates.append(Path(models_dir) / version)
-    candidates.extend([home.models / version, repo_root / "models" / version])
+    candidates.extend([home.models / version, base / "models" / version])
     for folder in candidates:
         meta = _metadata(folder)
         if meta is not None and meta.get("version") == version:
@@ -176,7 +189,7 @@ def _production(
                     "production",
                     version,
                     meta.get("synthetic") is True,
-                    "models/production.json",
+                    label,
                 ),
                 "",
             )
@@ -207,10 +220,14 @@ def resolve_model(
     if env_dir:
         return _explicit(Path(env_dir), "env")
     root = find_repo_root() if repo_root == "auto" else repo_root
-    if root is None:
-        return dev_choice(home, "no models/production.json found")
-    choice, reason = _production(root, home, env)
-    return choice if choice is not None else dev_choice(home, reason)
+    if root is not None:
+        choice, reason = _production(root / PRODUCTION_FILE, root, home, env, label="models/production.json")
+        return choice if choice is not None else dev_choice(home, reason)
+    pointer = installed_pointer(home)
+    if pointer.is_file():
+        choice, reason = _production(pointer, home.root, home, env, label=str(pointer))
+        return choice if choice is not None else dev_choice(home, reason)
+    return dev_choice(home, "no models/production.json found")
 
 
 _BUNDLES: dict[str, Bundle] = {}

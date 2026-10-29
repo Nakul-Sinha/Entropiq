@@ -6,6 +6,7 @@ Layout::
     <home>/settings.json           settings changed with /settings
     <home>/models/dev/             the demo model bundle, built on first use
     <home>/models/<version>/       production bundles copied here by hand (optional)
+    <home>/models/production.json  production pointer read by an installed command (a copy)
     <home>/analyses/<slug>/<sha>.{json,meta.json,features.parquet}   saved analyses
     <home>/mirrors/<host>/<owner>/<name>.git                          lean mirrors of analysed URLs
     <home>/cache/szz/<slug>/       per-repository SZZ cache

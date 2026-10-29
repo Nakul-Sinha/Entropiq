@@ -286,14 +286,14 @@ def ranked_table(
     """The file table: #, File, Change (only with ``changes``), Priority, Risk, Cost, Debt, Top reason."""
     table = make_table()
     table.add_column("#", justify="right", style="dim", no_wrap=True)
-    table.add_column("File", no_wrap=True, overflow="fold")
+    table.add_column("File", overflow="fold")
     if changes is not None:
         table.add_column("Change", no_wrap=True)
     table.add_column("Priority", no_wrap=True)
     table.add_column("Risk", justify="right", no_wrap=True)
     table.add_column("Cost", justify="right", no_wrap=True)
     table.add_column("Debt", overflow="fold")
-    table.add_column("Top reason", overflow="fold", min_width=20)
+    table.add_column("Top reason", overflow="fold")
     for item in rows:
         score, extra = item.score, item.extra
         row: list[RenderableType] = [str(item.rank), Text(clean(item.path))]
