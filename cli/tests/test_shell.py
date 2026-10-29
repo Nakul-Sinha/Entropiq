@@ -67,16 +67,16 @@ def test_complete_arguments(session: Session, sample_loaded: LoadedAnalysis) -> 
 
 
 def test_complete_analysis_paths(loaded_session: Session) -> None:
-    _add(loaded_session, "file", lambda s, a: None, complete=complete_analysis_paths)
-    prefix = _complete(loaded_session, "/file pkg/m")
+    _add(loaded_session, "probe", lambda s, a: None, complete=complete_analysis_paths)
+    prefix = _complete(loaded_session, "/probe pkg/m")
     assert prefix == [("pkg/mu.py", prefix[0][1], -5)]
     assert prefix[0][1].split()[0] in {"Critical", "High", "Medium", "Low"}
-    inner = [t for t, _, _ in _complete(loaded_session, "/file eta")]
+    inner = [t for t, _, _ in _complete(loaded_session, "/probe eta")]
     assert set(inner) == {"pkg/beta.py", "pkg/eta.py", "pkg/theta.py", "pkg/zeta.py"}
-    everything = _complete(loaded_session, "/file ")
+    everything = _complete(loaded_session, "/probe ")
     assert [t for t, _, _ in everything] == [f.path for f in loaded_session.current.result.files]  # type: ignore[union-attr]
     loaded_session.current = None
-    assert _complete(loaded_session, "/file p") == []
+    assert _complete(loaded_session, "/probe p") == []
 
 
 def test_completion_quotes_spaces(session: Session) -> None:
