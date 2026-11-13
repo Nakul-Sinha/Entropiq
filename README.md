@@ -1,6 +1,6 @@
 # Entropiq
 
-Entropiq ranks the Python source files of a Git repository by how much maintenance pain each is likely to cause
+Hii, This is a tool i built, meet Entnropiq it ranks the Python[for now] source files of a Git repository by how much maintenance pain each is likely to cause
 in the next 12 months, explains why, and turns the ranking into a fix plan that fits a time budget.
 
 For every file it reports:
