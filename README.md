@@ -14,6 +14,9 @@ For every file it reports:
 
 Internally the project is called TDP (AI Technical Debt Prioritizer); Python packages use the `tdp_` prefix.
 
+<img width="1917" height="1021" alt="image" src="https://github.com/user-attachments/assets/e2695d38-07f9-43bc-96a0-c269ddd299ef" />
+
+
 ## Install
 
 You need Python 3.12, [uv](https://docs.astral.sh/uv/) and git.
@@ -97,6 +100,9 @@ compare them over time.
 ## Commands
 
 ### Interactive shell
+
+<img width="1917" height="925" alt="image" src="https://github.com/user-attachments/assets/9aa5811b-88de-4217-ae1c-5a044aef0174" />
+
 
 | Group | Command | Aliases | What it does |
 |---|---|---|---|
