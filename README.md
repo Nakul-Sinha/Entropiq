@@ -12,7 +12,7 @@ For every file it reports:
 - a **fix plan** that picks the files with the best return within a budget, a **what-if** simulation of fixes, and
   optional **AI advice** for one file.
 
-Internally the project is called TDP (AI Technical Debt Prioritizer); Python packages use the `tdp_` prefix.
+Python packages use the `tdp_` prefix.
 
 <img width="1917" height="1021" alt="image" src="https://github.com/user-attachments/assets/e2695d38-07f9-43bc-96a0-c269ddd299ef" />
 
@@ -221,24 +221,18 @@ minute in rehearsal) while Python compiles and Windows Defender scans the new fi
 
 ## Limitations
 
-- The ranker does not significantly beat the hotspot heuristic (p 0.337 and 0.184), and its Popt is lower.
-- Only 20 test queries, so every interval is wide.
-- Labels undercount bugs: keyword detection of bug fixes has a recall of about 0.43, and 5 repositories have
-  keyword labels only.
 - Risk is calibrated on all repositories pooled, so the most extreme files can read 100% (click's `core.py`).
 - Priority is relative to the repository: a Critical file in a clean repository may be healthier than a Medium
   file elsewhere.
-- Python only, and history is limited to the last 3 years and 20,000 commits.
+- Python only(for now), and history is limited to the last 3 years and 20,000 commits.
 - Example files of fastapi and pylint make up 45% of the rows.
 - Rename detection differs between git versions, so a rebuilt feature can differ slightly on another machine.
 - The model bundle is a release asset of this private repository, so the action in another repository needs
   read access to its releases, or it falls back to the demo model and says so.
-- AI advice needs a logged-in Claude CLI or `ANTHROPIC_API_KEY`, and either way sends the file's scores, reasons
-  and up to 300 lines of its code to Anthropic.
 
 ## After V1
 
-- A web dashboard (Next.js) for browsing analyses.
+- A web dashboard (Next.js) for browsing analyses (not too exited for this, may or not build this).
 - The API and worker services with Postgres and Redis, Docker Compose and deployment.
 - Experiments: feature family ablation, horizon and parameter sensitivity, figures and a full results report.
 - Browser end-to-end tests and performance checks.
